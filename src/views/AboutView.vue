@@ -17,6 +17,18 @@
             />
           </template>
         </el-table-column>
+        <el-table-column label="操作" fixed="right" width="150">
+          <template #default="{ row, $index }">
+            <el-button
+              type="danger"
+              size="small"
+              @click="deleteRow($index)"
+              style="margin-right: 5px"
+              >删除</el-button
+            >
+            <el-button type="primary" size="small" @click="insertRow($index)">插入</el-button>
+          </template>
+        </el-table-column>
       </el-table>
       <el-empty v-else description="暂无数据"></el-empty>
     </div>
@@ -75,10 +87,53 @@ const handleInput = (rowIndex: number, colIndex: string, value: string) => {
   tableData.value = newData
 }
 
+// 删除行
+const deleteRow = (rowIndex: number) => {
+  if (!parsedAst.value || !parsedAst.value.values || parsedAst.value.values.type !== 'values') {
+    return
+  }
+
+  // 从AST中删除对应的行
+  parsedAst.value.values.values.splice(rowIndex, 1)
+}
+
+// 插入行
+const insertRow = (rowIndex: number) => {
+  if (!parsedAst.value || !parsedAst.value.values || parsedAst.value.values.type !== 'values') {
+    return
+  }
+
+  const columnCount = parsedAst.value.columns ? parsedAst.value.columns.length : 0
+  // 创建一个有columnCount 个元素的数组，每个元素要求完全独立，互不影响
+  const emptyRow = Array(columnCount)
+    .fill(undefined)
+    .map(() => ({
+      type: 'single_quote_string',
+      value: '',
+    }))
+
+  // 创建新的行元素
+  const newRow = {
+    type: 'expr_list',
+    prefix: null,
+    value: emptyRow,
+    // value: [
+    //   { type: 'single_quote_string', value: '' },
+    //   { type: 'single_quote_string', value: '' },
+    //   { type: 'single_quote_string', value: '' },
+    //   { type: 'single_quote_string', value: '' },
+    // ],
+  }
+
+  // 在当前行下方插入新行
+  parsedAst.value.values.values.splice(rowIndex + 1, 0, newRow)
+}
+
 // 生成修改后的SQL
 const generateModifiedSql = () => {
   try {
     if (parsedAst.value) {
+      console.log(parsedAst.value)
       const parser = new NodeSQLParser.Parser()
       const sql = parser.sqlify(parsedAst.value)
       generatedSql.value = sql
