@@ -8,7 +8,15 @@
     <div class="sql-visualization-section">
       <h3>SQL可视化编辑区域</h3>
       <el-table v-if="tableData.length > 0" :data="tableData" style="width: 100%">
-        <el-table-column v-for="(column, index) in tableColumns" :key="index" :label="column">
+        <el-table-column v-for="(column, index) in tableColumns" :key="index">
+          <template #header>
+            <el-input
+              :model-value="tableColumns[index]"
+              @input="handleHeaderInput(index, $event)"
+              placeholder="列名"
+              size="small"
+            />
+          </template>
           <template #default="{ row, $index }">
             <el-input
               :model-value="tableData[$index][index.toString()]"
@@ -52,7 +60,7 @@ const generatedSql = ref('')
 const handleSubmit = () => {
   try {
     const parser = new NodeSQLParser.Parser()
-    const astList = parser.astify(sqlContent.value)
+    const astList = parser.astify(sqlContent.value, { parseOptions: { includeLocations: true } })
     const ast = astList[0]
     console.log(astList)
 
@@ -69,13 +77,28 @@ const handleSubmit = () => {
   }
 }
 
-// 计算属性：表格列
-const tableColumns = computed(() => {
-  if (!parsedAst.value || !parsedAst.value.columns || !Array.isArray(parsedAst.value.columns)) {
-    return []
-  }
-  return parsedAst.value.columns
+// 计算属性：表格列（可写）
+const tableColumns = computed({
+  get: () => {
+    if (!parsedAst.value || !parsedAst.value.columns || !Array.isArray(parsedAst.value.columns)) {
+      return []
+    }
+    return parsedAst.value.columns
+  },
+  set: (newColumns) => {
+    if (!parsedAst.value || !parsedAst.value.columns || !Array.isArray(parsedAst.value.columns)) {
+      return
+    }
+    // 将newColumns深拷贝到parsedAst.value.columns
+    parsedAst.value.columns = [...newColumns]
+  },
 })
+// 处理表头输入事件
+const handleHeaderInput = (index: number, newValue: string) => {
+  const newtableColumns = [...tableColumns.value]
+  newtableColumns[index] = newValue
+  tableColumns.value = newtableColumns
+}
 
 // 处理输入事件
 const handleInput = (rowIndex: number, colIndex: string, value: string) => {
@@ -117,12 +140,6 @@ const insertRow = (rowIndex: number) => {
     type: 'expr_list',
     prefix: null,
     value: emptyRow,
-    // value: [
-    //   { type: 'single_quote_string', value: '' },
-    //   { type: 'single_quote_string', value: '' },
-    //   { type: 'single_quote_string', value: '' },
-    //   { type: 'single_quote_string', value: '' },
-    // ],
   }
 
   // 在当前行下方插入新行
