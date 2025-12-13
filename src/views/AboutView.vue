@@ -28,8 +28,8 @@
           </template>
           <template #default="{ row, $index }">
             <el-input
-              :model-value="tableData[$index][index.toString()]"
-              @input="handleInput($index, index.toString(), $event)"
+              :model-value="tableData[$index][index]"
+              @input="handleTableDataInput($index, index, $event)"
               placeholder="请输入值"
             />
           </template>
@@ -179,16 +179,6 @@ const deleteColumn = (index: number) => {
   }
 }
 
-// 处理输入事件
-const handleInput = (rowIndex: number, colIndex: string, value: string) => {
-  // 创建tableData的副本
-  const newData = [...tableData.value]
-  // 更新对应的值
-  newData[rowIndex][colIndex] = value
-  // 赋值回tableData，触发setter
-  tableData.value = newData
-}
-
 // 删除行
 const deleteRow = (rowIndex: number) => {
   if (!parsedAst.value || !parsedAst.value.values || parsedAst.value.values.type !== 'values') {
@@ -240,56 +230,58 @@ const generateModifiedSql = () => {
   }
 }
 
-// 计算属性：表格数据（可写）
-const tableData = computed({
-  get: () => {
-    if (!parsedAst.value || !parsedAst.value.values) {
-      return []
-    }
+/**
+ * 计算属性：表格数据
+ * @returns 表格数据数组
+ */
+const tableData = computed(() => {
+  if (!parsedAst.value || !parsedAst.value.values) {
+    return []
+  }
 
-    // 如果values是select语句，则返回空数据
-    if (parsedAst.value.values.type !== 'values') {
-      return []
-    }
+  // 如果values是select语句，则返回空数据
+  if (parsedAst.value.values.type !== 'values') {
+    return []
+  }
 
-    return parsedAst.value.values.values.map((valueItem) => {
-      const row: any = {}
-      if (valueItem.value && Array.isArray(valueItem.value)) {
-        valueItem.value.forEach((val, index) => {
-          // 处理不同类型的值
-          if (val.type === 'single_quote_string' || val.type === 'number') {
-            row[index.toString()] = val.value
-          } else {
-            row[index.toString()] = '无法解析'
-          }
-        })
-      }
-      return row
-    })
-  },
-  set: (newData) => {
-    console.log(newData)
-    if (!parsedAst.value || !parsedAst.value.values || parsedAst.value.values.type !== 'values') {
-      return
+  return parsedAst.value.values.values.map((valueItem) => {
+    const row: any = {}
+    if (valueItem.value && Array.isArray(valueItem.value)) {
+      valueItem.value.forEach((val, index) => {
+        // 处理不同类型的值
+        if (val.type === 'single_quote_string' || val.type === 'number') {
+          row[index.toString()] = val.value
+        } else {
+          row[index.toString()] = '无法解析'
+        }
+      })
     }
-
-    // 更新AST中的values
-    newData.forEach((row: any, rowIndex: number) => {
-      if (parsedAst.value!.values!.values[rowIndex]?.value) {
-        Object.keys(row).forEach((colIndexStr: string) => {
-          const colIndex = parseInt(colIndexStr)
-          if (!isNaN(colIndex) && parsedAst.value!.values!.values[rowIndex].value[colIndex]) {
-            const valueNode = parsedAst.value!.values!.values[rowIndex].value[colIndex]
-            // 根据当前值的类型更新
-            if (valueNode.type === 'single_quote_string' || valueNode.type === 'number') {
-              valueNode.value = row[colIndexStr]
-            }
-          }
-        })
-      }
-    })
-  },
+    return row
+  })
 })
+/**
+ * 处理表格数据输入事件
+ * @param rowIndex 行索引
+ * @param colIndex 列索引
+ * @param value 输入值
+ */
+const handleTableDataInput = (rowIndex: number, colIndex: number, value: string) => {
+  if (!parsedAst.value || !parsedAst.value.values || parsedAst.value.values.type !== 'values') {
+    console.log('AST树不存在:', parsedAst.value)
+    return
+  }
+
+  if (parsedAst.value!.values!.values[rowIndex]?.value) {
+    // 找到对应的行与列
+    const valueNode = parsedAst.value!.values!.values[rowIndex].value[colIndex]
+    // 判断是否为字符串或数字类型
+    if (valueNode.type === 'single_quote_string') {
+      valueNode.value = value
+    } else {
+      console.log('不支持的类型:', valueNode.type)
+    }
+  }
+}
 </script>
 
 <style scoped>
