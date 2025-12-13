@@ -12,6 +12,7 @@ import HelloWorld from './components/HelloWorld.vue'
 
       <nav>
         <RouterLink to="/about">sql编辑视图</RouterLink>
+        <RouterLink to="/refreshStudy">刷新学习</RouterLink>
       </nav>
     </div>
   </header>

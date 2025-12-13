@@ -42,7 +42,7 @@
                 <el-button type="success" size="small" @click="addColumn(tableColumns.length - 1)"
                   >加列</el-button
                 >
-                <el-button type="primary" size="small" @click="insertRow(0)">加行</el-button>
+                <el-button type="primary" size="small" @click="insertRow(-1)">加行</el-button>
               </div>
             </div>
           </template>
