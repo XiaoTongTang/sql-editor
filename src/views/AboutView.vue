@@ -10,12 +10,21 @@
       <el-table v-if="tableData.length > 0" :data="tableData" style="width: 100%">
         <el-table-column v-for="(column, index) in tableColumns" :key="index">
           <template #header>
-            <el-input
-              :model-value="tableColumns[index]"
-              @input="handleHeaderInput(index, $event)"
-              placeholder="列名"
-              size="small"
-            />
+            <div style="display: flex; flex-direction: column; gap: 2px; width: 100%">
+              <div style="display: flex; justify-content: space-between; width: 100%">
+                <el-button type="success" size="small" @click="addColumn(index)"> 加列 </el-button>
+                <el-button type="danger" size="small" @click="deleteColumn(index)">
+                  删列
+                </el-button>
+              </div>
+              <el-input
+                :model-value="tableColumns[index]"
+                @input="handleHeaderInput(index, $event)"
+                placeholder="列名"
+                size="small"
+                style="width: 100%"
+              />
+            </div>
           </template>
           <template #default="{ row, $index }">
             <el-input
@@ -25,16 +34,27 @@
             />
           </template>
         </el-table-column>
-        <el-table-column label="操作" fixed="right" width="150">
+        <el-table-column fixed="right" width="150">
+          <template #header>
+            <div style="display: flex; flex-direction: column; gap: 5px; text-align: center">
+              <div style="font-weight: bold">操作</div>
+              <div style="display: flex; gap: 5px">
+                <el-button type="success" size="small" @click="addColumn(tableColumns.length - 1)"
+                  >加列</el-button
+                >
+                <el-button type="primary" size="small" @click="insertRow(0)">加行</el-button>
+              </div>
+            </div>
+          </template>
           <template #default="{ row, $index }">
             <el-button
               type="danger"
               size="small"
               @click="deleteRow($index)"
               style="margin-right: 5px"
-              >删除</el-button
+              >删行</el-button
             >
-            <el-button type="primary" size="small" @click="insertRow($index)">插入</el-button>
+            <el-button type="primary" size="small" @click="insertRow($index)">加行</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -98,6 +118,65 @@ const handleHeaderInput = (index: number, newValue: string) => {
   const newtableColumns = [...tableColumns.value]
   newtableColumns[index] = newValue
   tableColumns.value = newtableColumns
+}
+
+// 添加列
+const addColumn = (index: number) => {
+  if (!parsedAst.value || !parsedAst.value.columns || !Array.isArray(parsedAst.value.columns)) {
+    return
+  }
+
+  // 复制当前的列数组
+  const newColumns = [...tableColumns.value]
+  // 在指定位置插入新的列名
+  newColumns.splice(index + 1, 0, '新列')
+  // 更新列头
+  tableColumns.value = newColumns
+
+  // 同步更新数据部分
+  if (parsedAst.value.values && parsedAst.value.values.type === 'values') {
+    // 遍历所有数据行
+    parsedAst.value.values.values.forEach((row) => {
+      if (row.value && Array.isArray(row.value)) {
+        // 在对应位置插入空值
+        row.value.splice(index + 1, 0, {
+          type: 'single_quote_string',
+          value: '',
+        })
+      }
+    })
+  }
+}
+
+// 删除列
+const deleteColumn = (index: number) => {
+  if (!parsedAst.value || !parsedAst.value.columns || !Array.isArray(parsedAst.value.columns)) {
+    return
+  }
+
+  // 确保至少保留一列
+  if (tableColumns.value.length <= 1) {
+    console.error('至少需要保留一列')
+    return
+  }
+
+  // 复制当前的列数组
+  const newColumns = [...tableColumns.value]
+  // 删除指定位置的列名
+  newColumns.splice(index, 1)
+  // 更新列头
+  tableColumns.value = newColumns
+
+  // 同步更新数据部分
+  if (parsedAst.value.values && parsedAst.value.values.type === 'values') {
+    // 遍历所有数据行
+    parsedAst.value.values.values.forEach((row) => {
+      if (row.value && Array.isArray(row.value)) {
+        // 删除对应位置的数据
+        row.value.splice(index, 1)
+      }
+    })
+  }
 }
 
 // 处理输入事件
