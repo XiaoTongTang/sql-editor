@@ -26,9 +26,9 @@
               />
             </div>
           </template>
-          <template #default="{ row, $index }">
+          <template #default="{ $index }">
             <el-input
-              :model-value="tableData[$index][index]"
+              :model-value="tableData[$index]?.[index] ?? ''"
               @input="handleTableDataInput($index, index, $event)"
               placeholder="请输入值"
             />
@@ -46,7 +46,7 @@
               </div>
             </div>
           </template>
-          <template #default="{ row, $index }">
+          <template #default="{ $index }">
             <el-button
               type="danger"
               size="small"
@@ -70,7 +70,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import NodeSQLParser, { type Insert_Replace } from 'node-sql-parser'
+import NodeSQLParser, { type Insert_Replace, type InsertReplaceValue } from 'node-sql-parser'
 import { ElInput, ElButton, ElTable, ElTableColumn, ElEmpty } from 'element-plus'
 
 const sqlContent = ref('')
@@ -81,7 +81,11 @@ const handleSubmit = () => {
   try {
     const parser = new NodeSQLParser.Parser()
     const astList = parser.astify(sqlContent.value, { parseOptions: { includeLocations: true } })
-    const ast = astList[0]
+    if (!astList) {
+      console.error('请输入有效的INSERT语句')
+      return
+    }
+    const ast = Array.isArray(astList) ? astList[0] : astList
     console.log(astList)
 
     // 检查是否为INSERT语句
@@ -97,27 +101,25 @@ const handleSubmit = () => {
   }
 }
 
-// 计算属性：表格列（可写）
-const tableColumns = computed({
-  get: () => {
-    if (!parsedAst.value || !parsedAst.value.columns || !Array.isArray(parsedAst.value.columns)) {
-      return []
-    }
-    return parsedAst.value.columns
-  },
-  set: (newColumns) => {
-    if (!parsedAst.value || !parsedAst.value.columns || !Array.isArray(parsedAst.value.columns)) {
-      return
-    }
-    // 将newColumns深拷贝到parsedAst.value.columns
-    parsedAst.value.columns = [...newColumns]
-  },
+/**
+ * 从AST中提取表格列名
+ */
+const tableColumns = computed(() => {
+  if (!parsedAst.value || !parsedAst.value.columns || !Array.isArray(parsedAst.value.columns)) {
+    return []
+  }
+  return parsedAst.value.columns
 })
-// 处理表头输入事件
+/**
+ * 处理表头输入事件，修改AST中的列名
+ * @param index 列索引
+ * @param newValue 新的列名
+ */
 const handleHeaderInput = (index: number, newValue: string) => {
-  const newtableColumns = [...tableColumns.value]
-  newtableColumns[index] = newValue
-  tableColumns.value = newtableColumns
+  if (!parsedAst.value || !parsedAst.value.columns || !Array.isArray(parsedAst.value.columns)) {
+    return
+  }
+  parsedAst.value.columns[index] = newValue
 }
 
 // 添加列
@@ -131,7 +133,7 @@ const addColumn = (index: number) => {
   // 在指定位置插入新的列名
   newColumns.splice(index + 1, 0, '新列')
   // 更新列头
-  tableColumns.value = newColumns
+  parsedAst.value.columns = newColumns
 
   // 同步更新数据部分
   if (parsedAst.value.values && parsedAst.value.values.type === 'values') {
@@ -165,7 +167,7 @@ const deleteColumn = (index: number) => {
   // 删除指定位置的列名
   newColumns.splice(index, 1)
   // 更新列头
-  tableColumns.value = newColumns
+  parsedAst.value.columns = newColumns
 
   // 同步更新数据部分
   if (parsedAst.value.values && parsedAst.value.values.type === 'values') {
@@ -205,9 +207,9 @@ const insertRow = (rowIndex: number) => {
     }))
 
   // 创建新的行元素
-  const newRow = {
+  const newRow: InsertReplaceValue = {
     type: 'expr_list',
-    prefix: null,
+    prefix: undefined,
     value: emptyRow,
   }
 
@@ -245,7 +247,7 @@ const tableData = computed(() => {
   }
 
   return parsedAst.value.values.values.map((valueItem) => {
-    const row: any = {}
+    const row: Record<string, string> = {}
     if (valueItem.value && Array.isArray(valueItem.value)) {
       valueItem.value.forEach((val, index) => {
         // 处理不同类型的值
