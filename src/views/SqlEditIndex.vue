@@ -1,13 +1,14 @@
 <template>
   <div>
     <div class="sql-input-section">
-      <el-input v-model="sqlContent" placeholder="Enter SQL query" type="textarea" />
+      <el-input v-model="sqlContent" placeholder="Enter SQL query" type="textarea" :rows=10 />
       <el-button type="primary" @click="sqlToAst">提交可视化编辑</el-button>
     </div>
+    <InsUpdSqlEditTable v-for="item in parsedAstList" :key="item.id" v-model="item.ast" />
 
     <div class="sql-output-section">
       <el-button type="success" @click="astToSql">输出修改后sql</el-button>
-      <el-input v-model="generatedSql" placeholder="生成的SQL语句" type="textarea" readonly />
+      <el-input v-model="generatedSql" placeholder="生成的SQL语句" type="textarea" readonly :rows=10 />
     </div>
   </div>
 </template>
@@ -16,7 +17,8 @@
 import { ref } from 'vue'
 import { ElInput, ElButton } from 'element-plus'
 import NodeSQLParser, { type Insert_Replace } from 'node-sql-parser'
-import shortUuid from 'short-uuid'
+import { generate as shortUuidGenerate } from 'short-uuid';
+import InsUpdSqlEditTable from '@/views/component/InsUpdSqlEditTable.vue'
 
 interface AstItem {
   id: string
@@ -38,7 +40,7 @@ const sqlToAst = () => {
     parsedAstList.value = list
       .filter((item) => item.type === 'insert')
       .map((item) => ({
-        id: shortUuid.generate(),
+        id: shortUuidGenerate(),
         type: item.type,
         ast: item as Insert_Replace,
       })) as AstItem[]
@@ -57,7 +59,8 @@ const astToSql = () => {
       console.log(astList)
       const parser = new NodeSQLParser.Parser()
       const sql = parser.sqlify(astList)
-      generatedSql.value = sql
+      // 遍历所有sql，给每个分号后面添加换行
+      generatedSql.value = sql.replace(/;/g, ';\n')
     }
   } catch (error) {
     console.error('生成SQL错误:', error)

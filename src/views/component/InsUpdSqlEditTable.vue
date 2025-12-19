@@ -1,14 +1,8 @@
 <template>
   <div class="about-view">
-    <div class="sql-input-section">
-      <el-input v-model="sqlContent" placeholder="Enter SQL query" type="textarea" />
-      <el-button type="primary" @click="handleSubmit">提交可视化编辑</el-button>
-    </div>
-
     <div class="sql-visualization-section">
-      <h3>SQL可视化编辑区域</h3>
-      <el-table v-if="tableData.length > 0" :data="tableData" style="width: 100%">
-        <el-table-column v-for="(column, index) in tableColumns" :key="index">
+      <el-table v-if="tableData.length > 0" :data="tableData" style="width: 100%" border>
+        <el-table-column v-for="(column, index) in tableColumns" :key="index" :width="150">
           <template #header>
             <div style="display: flex; flex-direction: column; gap: 2px; width: 100%">
               <div style="display: flex; justify-content: space-between; width: 100%">
@@ -60,46 +54,15 @@
       </el-table>
       <el-empty v-else description="暂无数据"></el-empty>
     </div>
-
-    <div class="sql-output-section">
-      <el-button type="success" @click="generateModifiedSql">输出修改后sql</el-button>
-      <el-input v-model="generatedSql" placeholder="生成的SQL语句" type="textarea" readonly />
-    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import NodeSQLParser, { type Insert_Replace, type InsertReplaceValue } from 'node-sql-parser'
+import { computed } from 'vue'
+import { type Insert_Replace, type InsertReplaceValue } from 'node-sql-parser'
 import { ElInput, ElButton, ElTable, ElTableColumn, ElEmpty } from 'element-plus'
 
-const sqlContent = ref('')
-const parsedAst = ref<Insert_Replace | null>(null)
-const generatedSql = ref('')
-
-const handleSubmit = () => {
-  try {
-    const parser = new NodeSQLParser.Parser()
-    const astList = parser.astify(sqlContent.value, { parseOptions: { includeLocations: true } })
-    if (!astList) {
-      console.error('请输入有效的INSERT语句')
-      return
-    }
-    const ast = Array.isArray(astList) ? astList[0] : astList
-    console.log(astList)
-
-    // 检查是否为INSERT语句
-    if (ast && ast.type === 'insert') {
-      parsedAst.value = ast as Insert_Replace
-    } else {
-      parsedAst.value = null
-      console.error('请输入有效的INSERT语句')
-    }
-  } catch (error) {
-    console.error('SQL解析错误:', error)
-    parsedAst.value = null
-  }
-}
+const parsedAst = defineModel<Insert_Replace | null>({ required: true })
 
 /**
  * 从AST中提取表格列名
@@ -215,21 +178,6 @@ const insertRow = (rowIndex: number) => {
 
   // 在当前行下方插入新行
   parsedAst.value.values.values.splice(rowIndex + 1, 0, newRow)
-}
-
-// 生成修改后的SQL
-const generateModifiedSql = () => {
-  try {
-    if (parsedAst.value) {
-      console.log(parsedAst.value)
-      const parser = new NodeSQLParser.Parser()
-      const sql = parser.sqlify(parsedAst.value)
-      generatedSql.value = sql
-    }
-  } catch (error) {
-    console.error('生成SQL错误:', error)
-    generatedSql.value = '生成SQL失败: ' + (error as Error).message
-  }
 }
 
 /**
