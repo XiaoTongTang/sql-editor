@@ -34,6 +34,7 @@ const sqlToAst = () => {
   try {
     const parser = new NodeSQLParser.Parser()
     const astList = parser.astify(sqlContent.value, { parseOptions: { includeLocations: true } })
+    console.log(astList)
     // 遍历astList从中挑出insert语句
     // 确保 astList 是数组后再过滤
     const list = Array.isArray(astList) ? astList : [astList]

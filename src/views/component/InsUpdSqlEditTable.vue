@@ -22,16 +22,24 @@
           </template>
           <template #default="{ $index }">
             <el-input
-              :model-value="tableData[$index]?.[index] ?? ''"
+              v-if="tableData[$index]?.[index]?.type === 'single_quote_string'"
+              :model-value="tableData[$index]?.[index]?.value ?? ''"
               @input="handleTableDataInput($index, index, $event)"
               placeholder="请输入值"
             />
+            <div v-if="tableData[$index]?.[index]?.type === 'null'">NULL</div>
+            <div v-if="fullDataEditButton" style="display: flex; justify-content: space-between; width: 100%">
+              <el-button type="default" size="small" @click="handleSetNull($index, index)" >NULL</el-button>
+              <el-button type="default" size="small" @click="handleSetStr($index, index)" >STR</el-button>
+            </div>
           </template>
         </el-table-column>
         <el-table-column fixed="right" width="150">
           <template #header>
             <div style="display: flex; flex-direction: column; gap: 5px; text-align: center">
-              <div style="font-weight: bold">操作</div>
+              <div style="font-weight: bold">操作
+                <el-switch v-model="fullDataEditButton" />
+              </div>
               <div style="display: flex; gap: 5px">
                 <el-button type="success" size="small" @click="addColumn(tableColumns.length - 1)"
                   >加列</el-button
@@ -58,11 +66,19 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { type Insert_Replace, type InsertReplaceValue } from 'node-sql-parser'
-import { ElInput, ElButton, ElTable, ElTableColumn, ElEmpty } from 'element-plus'
+import { ElInput, ElButton, ElTable, ElTableColumn, ElEmpty, ElSwitch } from 'element-plus'
 
+// v-model值，这个值就是一条insert语句的AST
 const parsedAst = defineModel<Insert_Replace | null>({ required: true })
+// 是否展开完整编辑按钮
+const fullDataEditButton = ref(false)
+
+interface BlockData {
+  type: 'single_quote_string' | 'null'
+  value: string | null
+}
 
 /**
  * 从AST中提取表格列名
@@ -195,14 +211,19 @@ const tableData = computed(() => {
   }
 
   return parsedAst.value.values.values.map((valueItem) => {
-    const row: Record<string, string> = {}
+    const row: Record<number, BlockData> = {}
     if (valueItem.value && Array.isArray(valueItem.value)) {
       valueItem.value.forEach((val, index) => {
         // 处理不同类型的值
-        if (val.type === 'single_quote_string' || val.type === 'number') {
-          row[index.toString()] = val.value
+        if (val.type === 'single_quote_string') {
+          row[index] = val
+        } else if (val.type === 'null') {
+          row[index] = val
         } else {
-          row[index.toString()] = '无法解析'
+          row[index] = {
+            type: 'single_quote_string',
+            value: '无法解析',
+          }
         }
       })
     }
@@ -210,7 +231,7 @@ const tableData = computed(() => {
   })
 })
 /**
- * 处理表格数据输入事件
+ * 处理表格数据输入事件(直接修改AST)
  * @param rowIndex 行索引
  * @param colIndex 列索引
  * @param value 输入值
@@ -229,6 +250,48 @@ const handleTableDataInput = (rowIndex: number, colIndex: number, value: string)
       valueNode.value = value
     } else {
       console.log('不支持的类型:', valueNode.type)
+    }
+  }
+}
+/**
+ * 设置指定行指定列的值为NULL(直接修改AST)
+ * @param rowIndex 行索引
+ * @param colIndex 列索引
+ */
+const handleSetNull = (rowIndex: number, colIndex: number) => {
+  if (!parsedAst.value || !parsedAst.value.values || parsedAst.value.values.type !== 'values') {
+    console.log('AST树不存在:', parsedAst.value)
+    return
+  }
+
+  if (parsedAst.value!.values!.values[rowIndex]?.value) {
+    // 找到对应的行与列,将这一列的值设置为NULL
+    parsedAst.value!.values!.values[rowIndex].value[colIndex] = {
+      type: 'null',
+      value: null,
+    }
+  }
+}
+/**
+ * 设置指定行指定列的值为字符串(直接修改AST)
+ * @param rowIndex 行索引
+ * @param colIndex 列索引
+ */
+const handleSetStr = (rowIndex: number, colIndex: number) => {
+  if (!parsedAst.value || !parsedAst.value.values || parsedAst.value.values.type !== 'values') {
+    console.log('AST树不存在:', parsedAst.value)
+    return
+  }
+
+  if (parsedAst.value!.values!.values[rowIndex]?.value) {
+    // 如果此列已经是字符串类型,则无需处理
+    if (parsedAst.value!.values!.values[rowIndex].value[colIndex].type === 'single_quote_string') {
+      return
+    }
+    // 否则，将这一列的值设置为字符串
+    parsedAst.value!.values!.values[rowIndex].value[colIndex] = {
+      type: 'single_quote_string',
+      value: '',
     }
   }
 }
