@@ -11,15 +11,24 @@
   "contributes": {
     "commands": [
       {
-        "command": "hello-world.showPage1",
-        "title": "Hello World: Show Page 1"
+        "command": "txt-sql-editor.openEditor",
+        "title": "sql-editor: Open Editor"
       },
       {
         "command": "hello-world.showPage2",
         "title": "Hello World: Show Page 2"
       }
-    ]
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "txt-sql-editor.openEditor",
+          "group": "navigation"
+        }
+      ]
+    }
   },
+  
   "scripts": {
     "dev": "vite",
     "build": "run-p type-check \"build-only {@}\" --",

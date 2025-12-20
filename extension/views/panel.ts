@@ -21,7 +21,7 @@ export class MainPanel {
       MainPanel.currentPanel._panel.reveal(ViewColumn.One);
     }
     else {
-      const panel = window.createWebviewPanel('showPage1', 'Hello Page1', ViewColumn.One, {
+      const panel = window.createWebviewPanel('txt-sql-editor', 'Sql-editor', ViewColumn.One, {
         enableScripts: true,
       });
 

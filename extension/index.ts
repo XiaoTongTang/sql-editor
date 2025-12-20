@@ -5,7 +5,7 @@ import { MainPanel, MainPanel2 } from './views';
 export function activate(context: ExtensionContext) {
   // Add command to the extension context
   context.subscriptions.push(
-    commands.registerCommand('hello-world.showPage1', async () => {
+    commands.registerCommand('txt-sql-editor.openEditor', async () => {
       MainPanel.render(context);
     }),
   );
