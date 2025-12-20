@@ -15,6 +15,10 @@
         "title": "sql-editor: Open Editor"
       },
       {
+        "command": "txt-sql-editor.sendSqlText",
+        "title": "sql-editor: Send Sql Text"
+      },
+      {
         "command": "hello-world.showPage2",
         "title": "Hello World: Show Page 2"
       }
@@ -23,6 +27,11 @@
       "editor/context": [
         {
           "command": "txt-sql-editor.openEditor",
+          "group": "navigation"
+        },
+        {
+          "command": "txt-sql-editor.sendSqlText",
+          "when": "editorTextFocus",
           "group": "navigation"
         }
       ]

@@ -14,7 +14,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { ElInput, ElButton } from 'element-plus'
 import NodeSQLParser, { type Insert_Replace } from 'node-sql-parser'
 import { generate as shortUuidGenerate } from 'short-uuid';
@@ -68,6 +68,24 @@ const astToSql = () => {
     generatedSql.value = '生成SQL失败: ' + (error as Error).message
   }
 }
+
+const messageListener = (event: MessageEvent) => {
+  console.log('收到消息:', event.data);
+  const message = event.data;
+
+  switch (message.msgType) {
+    case 'sendSqlText':
+      sqlContent.value = message.sqlText;
+      break;
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('message', messageListener);
+})
+onBeforeUnmount(() => {
+  window.removeEventListener('message', messageListener);
+})
 </script>
 
 <style scoped>

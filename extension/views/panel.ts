@@ -46,4 +46,7 @@ export class MainPanel {
       }
     }
   }
+  public getPanel() {
+    return this._panel;
+  }
 }
