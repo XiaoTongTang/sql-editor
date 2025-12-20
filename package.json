@@ -3,8 +3,22 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "main": "dist/extension/index.js",
   "engines": {
-    "node": "^20.19.0 || >=22.12.0"
+    "node": "^20.19.0 || >=22.12.0",
+    "vscode": "^1.75.0"
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "hello-world.showPage1",
+        "title": "Hello World: Show Page 1"
+      },
+      {
+        "command": "hello-world.showPage2",
+        "title": "Hello World: Show Page 2"
+      }
+    ]
   },
   "scripts": {
     "dev": "vite",
@@ -26,6 +40,7 @@
     "vue-router": "^4.6.3"
   },
   "devDependencies": {
+    "@tomjs/vite-plugin-vscode": "^5.1.0",
     "@tsconfig/node24": "^24.0.3",
     "@types/jsdom": "^27.0.0",
     "@types/node": "^24.10.1",
@@ -46,6 +61,8 @@
     "vite": "^7.2.4",
     "vite-plugin-vue-devtools": "^8.0.5",
     "vitest": "^4.0.14",
-    "vue-tsc": "^3.1.5"
+    "vue-tsc": "^3.1.5",
+    "@types/vscode": "^1.75.0",
+    "@types/vscode-webview": "^1.57.5"
   }
 }
