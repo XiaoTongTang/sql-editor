@@ -24,6 +24,18 @@ export class MainPanel {
       const panel = window.createWebviewPanel('txt-sql-editor', 'Sql-editor', ViewColumn.Beside, {
         enableScripts: true,
       });
+      // 监听“sql编辑器加载成功”消息，一旦加载成功，则发送主题颜色消息给编辑器
+      panel.webview.onDidReceiveMessage(
+        message => {
+          switch (message.msgType) {
+            case 'sqlEditorOnMount':
+              panel.webview.postMessage({ msgType: 'themeColor', color: window.activeColorTheme });
+              return;
+          }
+        },
+        undefined,
+        context.subscriptions
+      );
 
       MainPanel.currentPanel = new MainPanel(panel, context);
     }
