@@ -19,6 +19,16 @@ export class WebviewHelper {
     });
   }
 
+  public static setupHtmlAddColorMode(webview: Webview, context: ExtensionContext) {
+    const html = __getWebviewHtml__({
+      serverUrl: process.env.VITE_DEV_SERVER_URL,
+      webview,
+      context,
+    });
+    console.log('html', html)
+    return html
+  }
+
   public static setupWebviewHooks(webview: Webview, disposables: Disposable[]) {
     webview.onDidReceiveMessage(
       (message: any) => {

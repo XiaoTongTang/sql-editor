@@ -2,7 +2,7 @@
   <div class="about-view">
     <div class="sql-visualization-section">
       <el-table v-if="tableData.length > 0" :data="tableData" style="width: 100%" border>
-        <el-table-column v-for="(column, index) in tableColumns" :key="index" :width="150">
+        <el-table-column v-for="(column, index) in tableColumns" :key="index" :width="120">
           <template #header>
             <div style="display: flex; flex-direction: column; gap: 2px; width: 100%">
               <div style="display: flex; justify-content: space-between; width: 100%">
@@ -25,25 +25,41 @@
               v-if="tableData[$index]?.[index]?.type === 'single_quote_string'"
               :model-value="tableData[$index]?.[index]?.value ?? ''"
               @input="handleTableDataInput($index, index, $event)"
+              size="small"
               placeholder="请输入值"
             />
-            <div v-if="tableData[$index]?.[index]?.type === 'null'">NULL</div>
+            <el-input-number
+              v-if="tableData[$index]?.[index]?.type === 'number'"
+              :model-value="tableData[$index]?.[index]?.value ?? 0"
+              @input="handleTableDataInput($index, index, $event)"
+              controls-position="right"
+              size="small"
+              style="width: 100%"
+              placeholder="请输入值"
+            />
+            <el-input
+              v-if="tableData[$index]?.[index]?.type === 'null'"
+              :model-value="'NULL'"
+              disabled 
+              size="small"
+            />
             <div v-if="fullDataEditButton" style="display: flex; justify-content: space-between; width: 100%">
-              <el-button type="default" size="small" @click="handleSetNull($index, index)" >NULL</el-button>
-              <el-button type="default" size="small" @click="handleSetStr($index, index)" >STR</el-button>
+              <div @click="handleSetNull($index, index)" class="clickableText">NULL</div>
+              <div @click="handleSetStr($index, index)" class="clickableText">STR</div>
+              <div @click="handleSetNum($index, index)" class="clickableText">NUM</div>
             </div>
           </template>
         </el-table-column>
-        <el-table-column fixed="right" width="150">
+        <el-table-column fixed="right" width="140">
           <template #header>
             <div style="display: flex; flex-direction: column; gap: 5px; text-align: center">
               <div style="font-weight: bold">操作
                 <el-switch v-model="fullDataEditButton" />
               </div>
               <div style="display: flex; gap: 5px">
-                <el-button type="success" size="small" @click="addColumn(tableColumns.length - 1)"
-                  >加列</el-button
-                >
+                <el-button type="success" size="small" @click="addColumn(tableColumns.length - 1)">
+                  加列
+                </el-button>
                 <el-button type="primary" size="small" @click="insertRow(-1)">加行</el-button>
               </div>
             </div>
@@ -68,7 +84,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { type Insert_Replace, type InsertReplaceValue } from 'node-sql-parser'
-import { ElInput, ElButton, ElTable, ElTableColumn, ElEmpty, ElSwitch } from 'element-plus'
+import { ElInput, ElButton, ElTable, ElTableColumn, ElEmpty, ElSwitch, ElInputNumber } from 'element-plus'
 
 // v-model值，这个值就是一条insert语句的AST
 const parsedAst = defineModel<Insert_Replace | null>({ required: true })
@@ -76,8 +92,8 @@ const parsedAst = defineModel<Insert_Replace | null>({ required: true })
 const fullDataEditButton = ref(false)
 
 interface BlockData {
-  type: 'single_quote_string' | 'null'
-  value: string | null
+  type: 'single_quote_string' | 'number' | 'null'
+  value: string | number | null
 }
 
 /**
@@ -217,6 +233,8 @@ const tableData = computed(() => {
         // 处理不同类型的值
         if (val.type === 'single_quote_string') {
           row[index] = val
+        } else if (val.type === 'number') {
+          row[index] = val
         } else if (val.type === 'null') {
           row[index] = val
         } else {
@@ -236,7 +254,7 @@ const tableData = computed(() => {
  * @param colIndex 列索引
  * @param value 输入值
  */
-const handleTableDataInput = (rowIndex: number, colIndex: number, value: string) => {
+const handleTableDataInput = (rowIndex: number, colIndex: number, value: string | number | null | undefined) => {
   if (!parsedAst.value || !parsedAst.value.values || parsedAst.value.values.type !== 'values') {
     console.log('AST树不存在:', parsedAst.value)
     return
@@ -244,10 +262,12 @@ const handleTableDataInput = (rowIndex: number, colIndex: number, value: string)
 
   if (parsedAst.value!.values!.values[rowIndex]?.value) {
     // 找到对应的行与列
-    const valueNode = parsedAst.value!.values!.values[rowIndex].value[colIndex]
+    const valueNode: BlockData = parsedAst.value!.values!.values[rowIndex].value[colIndex]
     // 判断是否为字符串或数字类型
     if (valueNode.type === 'single_quote_string') {
-      valueNode.value = value
+      valueNode.value = String(value)
+    } else if(valueNode.type === 'number') {
+      valueNode.value = Number(value)
     } else {
       console.log('不支持的类型:', valueNode.type)
     }
@@ -295,6 +315,25 @@ const handleSetStr = (rowIndex: number, colIndex: number) => {
     }
   }
 }
+
+const handleSetNum = (rowIndex: number, colIndex: number) => {
+  if (!parsedAst.value || !parsedAst.value.values || parsedAst.value.values.type !== 'values') {
+    console.log('AST树不存在:', parsedAst.value)
+    return
+  }
+
+  if (parsedAst.value!.values!.values[rowIndex]?.value) {
+    // 如果此列已经是数字类型,则无需处理
+    if (parsedAst.value!.values!.values[rowIndex].value[colIndex].type === 'number') {
+      return
+    }
+    // 否则，将这一列的值设置为数字
+    parsedAst.value!.values!.values[rowIndex].value[colIndex] = {
+      type: 'number',
+      value: 0,
+    }
+  }
+}
 </script>
 
 <style scoped>
@@ -323,5 +362,11 @@ const handleSetStr = (rowIndex: number, colIndex: number) => {
 
 .sql-output-section .el-button {
   margin-bottom: 10px;
+}
+.clickableText {
+  cursor: pointer;
+}
+.clickableText:hover {
+  color: blue;
 }
 </style>

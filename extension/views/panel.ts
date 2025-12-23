@@ -18,10 +18,10 @@ export class MainPanel {
 
   public static render(context: ExtensionContext) {
     if (MainPanel.currentPanel) {
-      MainPanel.currentPanel._panel.reveal(ViewColumn.One);
+      MainPanel.currentPanel._panel.reveal(ViewColumn.Beside);
     }
     else {
-      const panel = window.createWebviewPanel('txt-sql-editor', 'Sql-editor', ViewColumn.One, {
+      const panel = window.createWebviewPanel('txt-sql-editor', 'Sql-editor', ViewColumn.Beside, {
         enableScripts: true,
       });
 

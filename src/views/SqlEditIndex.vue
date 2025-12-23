@@ -77,11 +77,22 @@ const messageListener = (event: MessageEvent) => {
     case 'sendSqlText':
       sqlContent.value = message.sqlText;
       break;
+    case 'themeColor':
+      if(message.color.kind == 2) {
+        document.documentElement.classList.add('dark'); // 将主题设置为暗色（直接为根<html>标签添加class='dark'，参考https://element-plus.org/zh-CN/guide/dark-mode）
+      }
+      break;
   }
 }
 
 onMounted(() => {
   window.addEventListener('message', messageListener);
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore
+  const vscode = acquireVsCodeApi();
+  vscode.postMessage({
+    msgType: 'sqlEditorOnMount',
+  });
 })
 onBeforeUnmount(() => {
   window.removeEventListener('message', messageListener);
