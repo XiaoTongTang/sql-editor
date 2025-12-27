@@ -4,7 +4,11 @@
       <el-input v-model="sqlContent" placeholder="Enter SQL query" type="textarea" :rows=10 />
       <el-button type="primary" @click="sqlToAst">提交可视化编辑</el-button>
     </div>
-    <InsUpdSqlEditTable v-for="item in editorTreeStore.editorAstList" :key="item.id" v-model="item.ast" />
+    <div class="sql-input-section">
+      <el-button type="primary" @click="editorTreeStore.undoOpt">撤销</el-button>
+      <el-button type="primary" @click="editorTreeStore.redoOpt">重做</el-button>
+    </div>
+    <InsUpdSqlEditTable v-for="(item, index) in editorTreeStore.editorAstList" :key="item.id" :astIndex="index" :astId="item.id" v-model="item.ast" />
 
     <div class="sql-output-section">
       <el-button type="success" @click="astToSql">输出修改后sql</el-button>

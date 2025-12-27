@@ -13,7 +13,7 @@
               </div>
               <el-input
                 :model-value="tableColumns[index]"
-                @input="handleHeaderInput(index, $event)"
+                @input="handleHeaderInput2(index, $event)"
                 placeholder="列名"
                 size="small"
                 style="width: 100%"
@@ -85,7 +85,20 @@
 import { computed, ref } from 'vue'
 import { type Insert_Replace, type InsertReplaceValue } from 'node-sql-parser'
 import { ElInput, ElButton, ElTable, ElTableColumn, ElEmpty, ElSwitch, ElInputNumber } from 'element-plus'
+import { useEditorTreeStore } from '@/stores/editorTree'
 
+const editorTreeStore = useEditorTreeStore()
+
+const props = defineProps({
+  astIndex: {
+    type: Number,
+    required: true,
+  },
+  astId: {
+    type: String,
+    required: true,
+  }
+})
 // v-model值，这个值就是一条insert语句的AST
 const parsedAst = defineModel<Insert_Replace | null>({ required: true })
 // 是否展开完整编辑按钮
@@ -110,11 +123,18 @@ const tableColumns = computed(() => {
  * @param index 列索引
  * @param newValue 新的列名
  */
-const handleHeaderInput = (index: number, newValue: string) => {
-  if (!parsedAst.value || !parsedAst.value.columns || !Array.isArray(parsedAst.value.columns)) {
-    return
-  }
-  parsedAst.value.columns[index] = newValue
+// const handleHeaderInput = (index: number, newValue: string) => {
+//   if (!parsedAst.value || !parsedAst.value.columns || !Array.isArray(parsedAst.value.columns)) {
+//     return
+//   }
+//   parsedAst.value.columns[index] = newValue
+// }
+const handleHeaderInput2 = (index: number, newValue: string) => {
+  editorTreeStore.setAstColumn(props.astId, {
+    index,
+    newValue,
+  })
+  console.log(editorTreeStore.optStack)
 }
 
 // 添加列
