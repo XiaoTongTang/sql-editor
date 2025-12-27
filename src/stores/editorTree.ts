@@ -3,7 +3,7 @@ import { defineStore } from 'pinia'
 import NodeSQLParser, { type Insert_Replace } from 'node-sql-parser'
 import { generate as shortUuidGenerate } from 'short-uuid';
 import { JSONPath } from 'jsonpath-plus';
-import { editOperates, type EditHeaderOperate } from './editOperates';
+import { editOperates, type EditHeaderOperateParam } from './editOperates';
 
 export interface AstItem {
   id: string
@@ -23,7 +23,7 @@ export interface OptStackItem {
 export interface EditOperate {
   coordinate: EditCoordinate // 编辑坐标
   operateType: string // 操作类型 （ 比如： set 或 add 或 remove ）
-  value: EditHeaderOperate // 编辑值
+  value: EditHeaderOperateParam // 编辑值
 }
 
 export interface OperateStack {
@@ -148,7 +148,7 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
    * @param index 列索引
    * @param newValue 新的列名
    */
-  const setAstColumn = (astId: string, operate: EditHeaderOperate) => {
+  const setAstColumn = (astId: string, operateParam: EditHeaderOperateParam) => {
     // 用astId查询这是第几个AST项
     const { index } = getAstItem(astId)
     if (index === -1) {
@@ -166,14 +166,14 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
       thisOperate: {
         coordinate: {...editCoord}, // 深拷贝
         operateType: 'setAstColumn',
-        value: operate,
+        value: operateParam,
       },
       inverseOperate: {
         coordinate: {...editCoord}, // 深拷贝
         operateType: 'setAstColumn',
         value: {
-          index: operate.index,
-          newValue: astItem.ast.columns[operate.index] || '',
+          index: operateParam.index,
+          newValue: astItem.ast.columns[operateParam.index] || '',
         },
       },
     })
@@ -181,7 +181,7 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
       return false
     }
     // 执行编辑操作
-    editOperates.setAstColumn(editorAstList, editCoord, operate)
+    editOperates.setAstColumn(editorAstList, editCoord, operateParam)
     return true
   }
 

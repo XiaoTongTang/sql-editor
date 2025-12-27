@@ -2,10 +2,13 @@ import { type Ref } from 'vue'
 import { JSONPath } from 'jsonpath-plus'
 import type { AstItem, EditCoordinate } from './editorTree'
 
-export interface EditHeaderOperate {
+export interface EditHeaderOperateParam {
   index: number // 列索引
   newValue: string // 新的列名
 }
+// 编辑操作函数类型，editorAstList为AST列表，editCoord为编辑坐标，operateParam为编辑参数
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type EditOperateFunc = (editorAstList: Ref<AstItem[] | null>, editCoord: EditCoordinate, operateParam: any) => boolean
 
 /**
  * 处理表头输入事件，修改AST中的列名
@@ -16,13 +19,13 @@ export interface EditHeaderOperate {
  * 因为这个 handleHeaderInput 函数本身的命名就是 “我要去改这颗AST树的第index列的列名” 所以其坐标只需要精细到 .value[0] 即可
  * 在记录操作栈的时候，也只是记录 “这个坐标，执行了handleHeaderInput操作，参数为index，newValue” 即可
  * @param editCoord 编辑坐标，此坐标预期结构为 .value[0] ,用于指定 “修改第几颗AST树的列名”
- * @param operate 列索引 + 新的列名
+ * @param operateParam 列索引 + 新的列名
  * @param isStackOpt 是否记录操作栈，默认记录
  */
 const setAstColumn = (
   editorAstList: Ref<AstItem[] | null>,
   editCoord: EditCoordinate,
-  operate: EditHeaderOperate,
+  operateParam: EditHeaderOperateParam,
 ) => {
   const astItem: AstItem | undefined = JSONPath({
     path: editCoord.valueExp,
@@ -32,10 +35,10 @@ const setAstColumn = (
     return false
   }
   // 执行操作
-  astItem.ast.columns[operate.index] = operate.newValue
+  astItem.ast.columns[operateParam.index] = operateParam.newValue
   return true
 }
 
-export const editOperates: Record<string, typeof setAstColumn> = {
+export const editOperates: Record<string, EditOperateFunc> = {
   setAstColumn,
 }
