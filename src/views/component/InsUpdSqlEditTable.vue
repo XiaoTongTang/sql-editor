@@ -83,7 +83,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { type Insert_Replace, type InsertReplaceValue } from 'node-sql-parser'
+import { type Insert_Replace } from 'node-sql-parser'
 import { ElInput, ElButton, ElTable, ElTableColumn, ElEmpty, ElSwitch, ElInputNumber } from 'element-plus'
 import { useEditorTreeStore } from '@/stores/editorTree'
 
@@ -140,38 +140,14 @@ const deleteColumn = (index: number) => {
 
 // 删除行
 const deleteRow = (rowIndex: number) => {
-  if (!parsedAst.value || !parsedAst.value.values || parsedAst.value.values.type !== 'values') {
-    return
-  }
-
-  // 从AST中删除对应的行
-  parsedAst.value.values.values.splice(rowIndex, 1)
+  // 调用删除行函数
+  editorTreeStore.deleteRowFromAst(props.astId, rowIndex)
 }
 
 // 插入行
 const insertRow = (rowIndex: number) => {
-  if (!parsedAst.value || !parsedAst.value.values || parsedAst.value.values.type !== 'values') {
-    return
-  }
-
-  const columnCount = parsedAst.value.columns ? parsedAst.value.columns.length : 0
-  // 创建一个有columnCount 个元素的数组，每个元素要求完全独立，互不影响
-  const emptyRow = Array(columnCount)
-    .fill(undefined)
-    .map(() => ({
-      type: 'single_quote_string',
-      value: '',
-    }))
-
-  // 创建新的行元素
-  const newRow: InsertReplaceValue = {
-    type: 'expr_list',
-    prefix: undefined,
-    value: emptyRow,
-  }
-
-  // 在当前行下方插入新行
-  parsedAst.value.values.values.splice(rowIndex + 1, 0, newRow)
+  // 调用插入行函数
+  editorTreeStore.insertRowToAst(props.astId, rowIndex)
 }
 
 /**

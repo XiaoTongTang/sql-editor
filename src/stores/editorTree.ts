@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
-import NodeSQLParser, { type Insert_Replace } from 'node-sql-parser'
+import NodeSQLParser, { type Insert_Replace, type InsertReplaceValue } from 'node-sql-parser'
 import { generate as shortUuidGenerate } from 'short-uuid';
 import { JSONPath } from 'jsonpath-plus';
 import { editOperates, type EditHeaderOperateParam } from './editOperates';
@@ -433,5 +433,85 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
     return true
   }
 
-  return { editorAstList, optStack, optStack2, getAstItem, sqlToAst, astToSql, setAstColumn, undoOpt, redoOpt, undo2, redo2, setAstColumn2, addColumnToAst, deleteColumnFromAst }
+  // 删除行
+  const deleteRowFromAst = (astId: string, rowIndex: number) => {
+    const { astItem, index: astIndex } = getAstItem(astId)
+    if (!astItem || !astItem.ast || !astItem.ast.values || astItem.ast.values.type !== 'values') {
+      return
+    }
+    // 检查是否整个AST只剩一行
+    if (astItem.ast.values.values.length <= 1) {
+      console.error('至少需要保留一行')
+      return false
+    }
+    // STEP0 创建一个空的栈项，用于记录操作栈
+    const optStackItem: OptStackItem2 = {
+      thisOperate: { operArray: [] },
+      inverseOperate: { operArray: [] }
+    }
+    // STEP1 调用splice函数删除行，并计算出逆操作的参数
+    const deleteRowOp = {
+      rootObj: editorAstList.value,
+      editCoord: `[${astIndex}].ast.values.values`,
+      start: rowIndex,
+      deleteCount: 1,
+      items: [],
+    }
+    const deleteRowResult = coordSplice(deleteRowOp)
+    if (!deleteRowResult.reverseParams) {
+      return false
+    }
+    // STEP2 向操作栈item中记录插入行数据的crud操作
+    optStackItem.thisOperate.operArray.push(deleteRowOp) // 向 ”正向操作列表“ 中，添加 ”删除行“ 操作
+    optStackItem.inverseOperate.operArray.unshift(deleteRowResult.reverseParams) // 向 ”逆操作列表“ 中，添加 ”添加行“（即删除行的逆操作） 操作
+    // STEP3 将操作栈item push进操作栈中
+    otherOptPushOptStack2(optStackItem)
+    return true
+  }
+
+  // 插入行
+  const insertRowToAst = (astId: string, rowIndex: number) => {
+    const { astItem, index: astIndex } = getAstItem(astId)
+    if (!astItem || !astItem.ast || !astItem.ast.values || astItem.ast.values.type !== 'values') {
+      return
+    }
+    // STEP0 创建一个空的栈项，用于记录操作栈
+    const optStackItem: OptStackItem2 = {
+      thisOperate: { operArray: [] },
+      inverseOperate: { operArray: [] }
+    }
+    const columnCount = astItem.ast.columns ? astItem.ast.columns.length : 0
+    // STEP1 创建一个有columnCount 个元素的数组，每个元素要求完全独立，互不影响
+    const emptyRow = Array(columnCount)
+      .fill(undefined)
+      .map(() => ({
+        type: 'single_quote_string',
+        value: '',
+      }))
+    // STEP2 创建新的行元素
+    const newRow: InsertReplaceValue = {
+      type: 'expr_list',
+      prefix: undefined,
+      value: emptyRow,
+    }
+    // STEP3 调用splice函数插入行，并计算出逆操作的参数
+    const insertRowOp = {
+      rootObj: editorAstList.value,
+      editCoord: `[${astIndex}].ast.values.values`,
+      start: rowIndex + 1,
+      deleteCount: 0,
+      items: [newRow],
+    }
+    const insertRowResult = coordSplice(insertRowOp)
+    if (!insertRowResult.reverseParams) {
+      return false
+    }
+    // STEP4 向操作栈item中记录插入行数据的crud操作
+    optStackItem.thisOperate.operArray.push(insertRowOp) // 向 ”正向操作列表“ 中，添加 ”插入行“ 操作
+    optStackItem.inverseOperate.operArray.unshift(insertRowResult.reverseParams) // 向 ”逆操作列表“ 中，添加 ”删除行“（即插入行的逆操作） 操作
+
+    // STEP4 将操作栈item push进操作栈中
+    otherOptPushOptStack2(optStackItem)
+  }
+  return { editorAstList, optStack, optStack2, getAstItem, sqlToAst, astToSql, setAstColumn, undoOpt, redoOpt, undo2, redo2, setAstColumn2, addColumnToAst, deleteColumnFromAst, insertRowToAst, deleteRowFromAst }
 })
