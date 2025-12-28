@@ -13,7 +13,7 @@
               </div>
               <el-input
                 :model-value="tableColumns[index]"
-                @input="handleHeaderInput2(index, $event)"
+                @input="handleHeaderInput3(index, $event)"
                 placeholder="列名"
                 size="small"
                 style="width: 100%"
@@ -129,12 +129,16 @@ const tableColumns = computed(() => {
 //   }
 //   parsedAst.value.columns[index] = newValue
 // }
-const handleHeaderInput2 = (index: number, newValue: string) => {
-  editorTreeStore.setAstColumn(props.astId, {
-    index,
-    newValue,
-  })
-  console.log(editorTreeStore.optStack)
+// const handleHeaderInput2 = (index: number, newValue: string) => {
+//   editorTreeStore.setAstColumn(props.astId, {
+//     index,
+//     newValue,
+//   })
+//   console.log(editorTreeStore.optStack)
+// }
+const handleHeaderInput3 = (index: number, newValue: string) => {
+  editorTreeStore.setAstColumn2(props.astId, index, newValue)
+  console.log(editorTreeStore.optStack2)
 }
 
 // 添加列

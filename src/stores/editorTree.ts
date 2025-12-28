@@ -4,11 +4,26 @@ import NodeSQLParser, { type Insert_Replace } from 'node-sql-parser'
 import { generate as shortUuidGenerate } from 'short-uuid';
 import { JSONPath } from 'jsonpath-plus';
 import { editOperates, type EditHeaderOperateParam } from './editOperates';
+import { coordSet, coordSplice, isCoordSetParams, isCoordSpliceParams, type CoordSetParams, type CoordSpliceParams } from '@/utils/coordCrudFunc';
 
 export interface AstItem {
   id: string
   type: string
   ast: Insert_Replace
+}
+// 操作栈中的元素
+export interface OptStackItem2 {
+  thisOperate: EditOperate2 // 本次操作
+  inverseOperate: EditOperate2 // 本次操作的逆操作(用于撤销本次操作)
+}
+// 一次业务编辑操作（备注：一次业务编辑操作下面会有很多原子crud操作，存放在operArray数组中，按顺序执行operArray等价于一次业务编辑操作）
+export interface EditOperate2 {
+  operArray: (CoordSpliceParams | CoordSetParams)[]
+}
+// 操作栈
+export interface OperateStack2 {
+  stack: OptStackItem2[] // 操作栈
+  pointer: number // 操作栈指针(撤销时，不会直接删除栈顶元素，而是将指针减一（以备可能的重做操作），只有撤销后再执行一次新编辑后，才会将指针以上的所有操作出栈)
 }
 // 编辑坐标
 export interface EditCoordinate {
@@ -34,6 +49,10 @@ export interface OperateStack {
 export const useEditorTreeStore = defineStore('editorTree', () => {
   const editorAstList = ref<AstItem[] | null>(null)
   const optStack = ref<OperateStack>({
+    stack: [],
+    pointer: -1,
+  })
+  const optStack2 = ref<OperateStack2>({
     stack: [],
     pointer: -1,
   })
@@ -142,6 +161,66 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
       optStack.value.pointer--
     }
   }
+  /**
+   * 重做操作栈2
+   * @returns 
+   */
+  const redo2 = () => {
+    if (optStack2.value.pointer < optStack2.value.stack.length - 1) {
+      optStack2.value.pointer++
+      const stackItem = optStack2.value.stack[optStack2.value.pointer]
+      if (!stackItem) {
+        return
+      }
+      // 遍历stackItem的thisOperate，逐一执行 “坐标crud” 操作
+      stackItem.thisOperate.operArray.forEach((operate) => {
+        if(isCoordSpliceParams(operate)) {
+          coordSplice(operate)
+        }
+        if(isCoordSetParams(operate)) {
+          coordSet(operate)
+        }
+      })
+    }
+  }
+  /**
+   * 撤销操作栈2
+   * @returns 
+   */
+  const undo2 = () => {
+    if (optStack2.value.pointer >= 0) {
+      const stackItem = optStack2.value.stack[optStack2.value.pointer]
+      if (!stackItem) {
+        return
+      }
+      // 遍历stackItem的inverseOperate，逐一执行 “坐标crud” 操作
+      stackItem.inverseOperate.operArray.forEach((operate) => {
+        if(isCoordSpliceParams(operate)) {
+          coordSplice(operate)
+        }
+        if(isCoordSetParams(operate)) {
+          coordSet(operate)
+        }
+      })
+      optStack2.value.pointer--
+    }
+  }
+  /**
+   * 供给普通编辑操作使用的操作栈入栈函数
+   * @param optItem 
+   */
+  const otherOptPushOptStack2 = (optItem: OptStackItem2) => {
+    // 将当前pointer以上的操作出栈（因为产生了一次新的操作后，指针以上的操作就全部会变得“无法重做”，因此需要全部出栈）
+    optStack2.value.stack.splice(optStack2.value.pointer + 1)
+    // 将本次操作入栈
+    optStack2.value.stack.push(optItem)
+    // 如果栈中元素超过50，就将最早的操作删除
+    if (optStack2.value.stack.length > 50) {
+      optStack2.value.stack.shift()
+    }
+    // 将指针指向栈顶
+    optStack2.value.pointer = optStack2.value.stack.length - 1
+  }
   // =================编辑单个AST使用的函数====================
   /**
    * 处理表头输入事件，修改AST中的列名
@@ -184,6 +263,38 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
     editOperates.setAstColumn(editorAstList, editCoord, operateParam)
     return true
   }
+  /**
+   * 处理表头输入事件，修改AST中的列名
+   * @param index 列索引
+   * @param newValue 新的列名
+   */
+  const setAstColumn2 = (astId: string, index: number, newValue: string) => {
+    // 用astId查询这是第几个AST项
+    const { astItem, index: astIndex } = getAstItem(astId)
+    if (!astItem || !astItem.ast || !astItem.ast.columns || !Array.isArray(astItem.ast.columns)) {
+      return false
+    }
+    if(!editorAstList.value) {
+      return false
+    }
+    // 算出正向操作的参数
+    const posSetOper = {
+      rootObj: editorAstList.value,
+      editCoord: `[${astIndex}].ast.columns[${index}]`, // 编辑坐标：修改表头的列名
+      newValue,
+    }
+    // 执行修改表头的操作（设置表头只需要调用一次coordSet即可完成，没有更多的操作）
+    const coordSetResult = coordSet(posSetOper)
+    if(!coordSetResult.reverseParams) {
+      return false
+    }
+    // 记录操作栈
+    otherOptPushOptStack2({
+      thisOperate: { operArray: [posSetOper] },
+      inverseOperate: { operArray: [coordSetResult.reverseParams] }
+    })
+    return true
+  }
 
-  return { editorAstList, optStack, getAstItem, sqlToAst, astToSql, setAstColumn, undoOpt, redoOpt }
+  return { editorAstList, optStack, optStack2, getAstItem, sqlToAst, astToSql, setAstColumn, undoOpt, redoOpt, undo2, redo2, setAstColumn2 }
 })

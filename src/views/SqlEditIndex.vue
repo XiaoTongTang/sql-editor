@@ -5,8 +5,8 @@
       <el-button type="primary" @click="sqlToAst">提交可视化编辑</el-button>
     </div>
     <div class="sql-input-section">
-      <el-button type="primary" @click="editorTreeStore.undoOpt">撤销</el-button>
-      <el-button type="primary" @click="editorTreeStore.redoOpt">重做</el-button>
+      <el-button type="primary" @click="editorTreeStore.undo2">撤销</el-button>
+      <el-button type="primary" @click="editorTreeStore.redo2">重做</el-button>
     </div>
     <InsUpdSqlEditTable v-for="(item, index) in editorTreeStore.editorAstList" :key="item.id" :astIndex="index" :astId="item.id" v-model="item.ast" />
 

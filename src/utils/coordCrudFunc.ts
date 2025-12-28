@@ -25,6 +25,56 @@ export interface CoordSetResult<T = unknown> {
 }
 
 /**
+ * 校验对象是否为有效的 CoordSpliceParams
+ * @param value 要校验的值
+ * @returns 是否为有效的 CoordSpliceParams
+ */
+export function isCoordSpliceParams(value: unknown): value is CoordSpliceParams {
+  if (value === null || value === undefined) {
+    return false;
+  }
+  const params = value as Record<string, unknown>;
+  if (!('rootObj' in params)) {
+    return false;
+  }
+  if (!('editCoord' in params)) {
+    return false;
+  }
+  if (!('start' in params)) {
+    return false;
+  }
+  if (!('deleteCount' in params)) {
+    return false;
+  }
+  if (!('items' in params)) {
+    return false;
+  }
+  return true;
+}
+
+/**
+ * 校验对象是否为有效的 CoordSetParams
+ * @param value 要校验的值
+ * @returns 是否为有效的 CoordSetParams
+ */
+export function isCoordSetParams(value: unknown): value is CoordSetParams {
+  if (value === null || value === undefined) {
+    return false;
+  }
+  const params = value as Record<string, unknown>;
+  if (!('rootObj' in params)) {
+    return false;
+  }
+  if (!('editCoord' in params)) {
+    return false;
+  }
+  if (!('newValue' in params)) {
+    return false;
+  }
+  return true;
+}
+
+/**
  * 获取set操作的逆操作参数（用于撤销set操作）
  * @param param set参数
  * @param oldValue 被覆盖的旧值
