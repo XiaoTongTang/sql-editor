@@ -1,10 +1,17 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import NodeSQLParser, { type Insert_Replace, type InsertReplaceValue } from 'node-sql-parser'
-import { generate as shortUuidGenerate } from 'short-uuid';
-import { JSONPath } from 'jsonpath-plus';
-import { editOperates, type EditHeaderOperateParam } from './editOperates';
-import { coordSet, coordSplice, isCoordSetParams, isCoordSpliceParams, type CoordSetParams, type CoordSpliceParams } from '@/utils/coordCrudFunc';
+import { generate as shortUuidGenerate } from 'short-uuid'
+import { JSONPath } from 'jsonpath-plus'
+import { editOperates, type EditHeaderOperateParam } from './editOperates'
+import {
+  coordSet,
+  coordSplice,
+  isCoordSetParams,
+  isCoordSpliceParams,
+  type CoordSetParams,
+  type CoordSpliceParams,
+} from '@/utils/coordCrudFunc'
 
 export interface AstItem {
   id: string
@@ -111,7 +118,7 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
   // =================操作栈使用的函数======================
   /**
    * 供给普通编辑操作使用的操作栈入栈函数
-   * @param optItem 
+   * @param optItem
    */
   const otherOptPushOptStack = (optItem: OptStackItem) => {
     // 将当前pointer以上的操作出栈（因为产生了一次新的操作后，指针以上的操作就全部会变得“无法重做”，因此需要全部出栈）
@@ -145,7 +152,7 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
   }
   /**
    * 撤销操作
-   * @returns 
+   * @returns
    */
   const undoOpt = () => {
     if (optStack.value.pointer >= 0) {
@@ -163,7 +170,7 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
   }
   /**
    * 重做操作栈2
-   * @returns 
+   * @returns
    */
   const redo2 = () => {
     if (optStack2.value.pointer < optStack2.value.stack.length - 1) {
@@ -174,10 +181,10 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
       }
       // 遍历stackItem的thisOperate，逐一执行 “坐标crud” 操作
       stackItem.thisOperate.operArray.forEach((operate) => {
-        if(isCoordSpliceParams(operate)) {
+        if (isCoordSpliceParams(operate)) {
           coordSplice(operate)
         }
-        if(isCoordSetParams(operate)) {
+        if (isCoordSetParams(operate)) {
           coordSet(operate)
         }
       })
@@ -185,7 +192,7 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
   }
   /**
    * 撤销操作栈2
-   * @returns 
+   * @returns
    */
   const undo2 = () => {
     if (optStack2.value.pointer >= 0) {
@@ -195,10 +202,10 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
       }
       // 遍历stackItem的inverseOperate，逐一执行 “坐标crud” 操作
       stackItem.inverseOperate.operArray.forEach((operate) => {
-        if(isCoordSpliceParams(operate)) {
+        if (isCoordSpliceParams(operate)) {
           coordSplice(operate)
         }
-        if(isCoordSetParams(operate)) {
+        if (isCoordSetParams(operate)) {
           coordSet(operate)
         }
       })
@@ -207,7 +214,7 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
   }
   /**
    * 供给普通编辑操作使用的操作栈入栈函数
-   * @param optItem 
+   * @param optItem
    */
   const otherOptPushOptStack2 = (optItem: OptStackItem2) => {
     // 将当前pointer以上的操作出栈（因为产生了一次新的操作后，指针以上的操作就全部会变得“无法重做”，因此需要全部出栈）
@@ -236,19 +243,22 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
     // 构建编辑坐标
     const editCoord: EditCoordinate = { valueExp: `$[${index}]` }
     // 通过编辑坐标，从editorAstList中获取到当前AST项
-    const astItem: AstItem | undefined = JSONPath({path: editCoord.valueExp, json: editorAstList.value})[0];
+    const astItem: AstItem | undefined = JSONPath({
+      path: editCoord.valueExp,
+      json: editorAstList.value,
+    })[0]
     if (!astItem || !astItem.ast || !astItem.ast.columns || !Array.isArray(astItem.ast.columns)) {
       return false
     }
     // 记录操作栈
     otherOptPushOptStack({
       thisOperate: {
-        coordinate: {...editCoord}, // 深拷贝
+        coordinate: { ...editCoord }, // 深拷贝
         operateType: 'setAstColumn',
         value: operateParam,
       },
       inverseOperate: {
-        coordinate: {...editCoord}, // 深拷贝
+        coordinate: { ...editCoord }, // 深拷贝
         operateType: 'setAstColumn',
         value: {
           index: operateParam.index,
@@ -256,7 +266,7 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
         },
       },
     })
-    if(!editOperates.setAstColumn) {
+    if (!editOperates.setAstColumn) {
       return false
     }
     // 执行编辑操作
@@ -274,7 +284,7 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
     if (!astItem || !astItem.ast || !astItem.ast.columns || !Array.isArray(astItem.ast.columns)) {
       return false
     }
-    if(!editorAstList.value) {
+    if (!editorAstList.value) {
       return false
     }
     // 算出正向操作的参数
@@ -285,13 +295,13 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
     }
     // 执行修改表头的操作（设置表头只需要调用一次coordSet即可完成，没有更多的操作）
     const coordSetResult = coordSet(posSetOper)
-    if(!coordSetResult.reverseParams) {
+    if (!coordSetResult.reverseParams) {
       return false
     }
     // 记录操作栈
     otherOptPushOptStack2({
       thisOperate: { operArray: [posSetOper] },
-      inverseOperate: { operArray: [coordSetResult.reverseParams] }
+      inverseOperate: { operArray: [coordSetResult.reverseParams] },
     })
     return true
   }
@@ -314,7 +324,7 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
     // STEP0 创建一个空的栈项，用于记录操作栈
     const optStackItem: OptStackItem2 = {
       thisOperate: { operArray: [] },
-      inverseOperate: { operArray: [] }
+      inverseOperate: { operArray: [] },
     }
 
     const addColumnOp = {
@@ -332,7 +342,7 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
     // STEP1.1 向操作栈item中记录crud操作
     optStackItem.thisOperate.operArray.push(addColumnOp) // 向 ”正向操作列表“ 中，添加 ”添加列“ 操作
     optStackItem.inverseOperate.operArray.unshift(addColumnsResult.reverseParams) // 向 ”逆操作列表“ 中，添加 ”删除列“（即添加列的逆操作） 操作
-    
+
     if (astItem.ast.values && astItem.ast.values.type === 'values') {
       // STEP2 遍历所有数据行
       astItem.ast.values.values.forEach((row, rowIndex) => {
@@ -343,10 +353,12 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
             editCoord: `[${astIndex}].ast.values.values[${rowIndex}].value`,
             start: index + 1,
             deleteCount: 0,
-            items: [{
-              type: 'single_quote_string',
-              value: '',
-            }] // 新的数据（注意，这里是每次都新建完全不同的一个新对象）
+            items: [
+              {
+                type: 'single_quote_string',
+                value: '',
+              },
+            ], // 新的数据（注意，这里是每次都新建完全不同的一个新对象）
           }
           const addDataResult = coordSplice(addValueDataOp)
           if (!addDataResult.reverseParams) {
@@ -386,7 +398,7 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
     // STEP0 创建一个空的栈项，用于记录操作栈
     const optStackItem: OptStackItem2 = {
       thisOperate: { operArray: [] },
-      inverseOperate: { operArray: [] }
+      inverseOperate: { operArray: [] },
     }
 
     // STEP1 调用splice函数删除列头，并计算出逆操作的参数
@@ -415,7 +427,7 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
             editCoord: `[${astIndex}].ast.values.values[${rowIndex}].value`,
             start: index,
             deleteCount: 1,
-            items: []
+            items: [],
           }
           // STEP2.1 删除对应列位置的数据
           const deleteDataResult = coordSplice(deleteValueDataOp)
@@ -447,7 +459,7 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
     // STEP0 创建一个空的栈项，用于记录操作栈
     const optStackItem: OptStackItem2 = {
       thisOperate: { operArray: [] },
-      inverseOperate: { operArray: [] }
+      inverseOperate: { operArray: [] },
     }
     // STEP1 调用splice函数删除行，并计算出逆操作的参数
     const deleteRowOp = {
@@ -478,7 +490,7 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
     // STEP0 创建一个空的栈项，用于记录操作栈
     const optStackItem: OptStackItem2 = {
       thisOperate: { operArray: [] },
-      inverseOperate: { operArray: [] }
+      inverseOperate: { operArray: [] },
     }
     const columnCount = astItem.ast.columns ? astItem.ast.columns.length : 0
     // STEP1 创建一个有columnCount 个元素的数组，每个元素要求完全独立，互不影响
@@ -513,5 +525,22 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
     // STEP4 将操作栈item push进操作栈中
     otherOptPushOptStack2(optStackItem)
   }
-  return { editorAstList, optStack, optStack2, getAstItem, sqlToAst, astToSql, setAstColumn, undoOpt, redoOpt, undo2, redo2, setAstColumn2, addColumnToAst, deleteColumnFromAst, insertRowToAst, deleteRowFromAst }
+  return {
+    editorAstList,
+    optStack,
+    optStack2,
+    getAstItem,
+    sqlToAst,
+    astToSql,
+    setAstColumn,
+    undoOpt,
+    redoOpt,
+    undo2,
+    redo2,
+    setAstColumn2,
+    addColumnToAst,
+    deleteColumnFromAst,
+    insertRowToAst,
+    deleteRowFromAst,
+  }
 })
