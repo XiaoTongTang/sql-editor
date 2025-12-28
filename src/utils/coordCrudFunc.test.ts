@@ -533,29 +533,33 @@ describe('jsonPathSet', () => {
   describe('基本设置操作', () => {
     it('应该设置对象中指定路径的值', () => {
       const obj = { name: '张三', age: 25 };
-      const result = coordSet(obj, 'name', '李四');
-      expect(result).toBe(true);
+      const result = coordSet({ rootObj: obj, editCoord: 'name', newValue: '李四' });
+      expect(result.oldValue).toBe('张三');
+      expect(result.reverseParams).not.toBeNull();
       expect(obj.name).toBe('李四');
     });
 
     it('应该设置嵌套对象中的值', () => {
       const obj = { user: { profile: { name: '张三' } } };
-      const result = coordSet(obj, 'user.profile.name', '王五');
-      expect(result).toBe(true);
+      const result = coordSet({ rootObj: obj, editCoord: 'user.profile.name', newValue: '王五' });
+      expect(result.oldValue).toBe('张三');
+      expect(result.reverseParams).not.toBeNull();
       expect(obj.user.profile.name).toBe('王五');
     });
 
     it('应该设置数组元素的值', () => {
       const obj = { items: [1, 2, 3] };
-      const result = coordSet(obj, 'items[1]', 99);
-      expect(result).toBe(true);
+      const result = coordSet({ rootObj: obj, editCoord: 'items[1]', newValue: 99 });
+      expect(result.oldValue).toBe(2);
+      expect(result.reverseParams).not.toBeNull();
       expect(obj.items[1]).toBe(99);
     });
 
     it('应该支持点语法和方括号混合', () => {
       const obj = { users: [{ name: 'A' }, { name: 'B' }] };
-      const result = coordSet(obj, 'users[0].name', 'NewA');
-      expect(result).toBe(true);
+      const result = coordSet({ rootObj: obj, editCoord: 'users[0].name', newValue: 'NewA' });
+      expect(result.oldValue).toBe('A');
+      expect(result.reverseParams).not.toBeNull();
       expect(obj?.users[0]?.name).toBe('NewA');
     });
   });
@@ -563,62 +567,71 @@ describe('jsonPathSet', () => {
   describe('各种类型设置', () => {
     it('应该支持设置字符串', () => {
       const obj = { value: '' };
-      expect(coordSet(obj, 'value', 'hello')).toBe(true);
+      const result = coordSet({ rootObj: obj, editCoord: 'value', newValue: 'hello' });
+      expect(result.oldValue).toBe('');
       expect(obj.value).toBe('hello');
     });
 
     it('应该支持设置数字', () => {
       const obj = { value: 0 };
-      expect(coordSet(obj, 'value', 42)).toBe(true);
+      const result = coordSet({ rootObj: obj, editCoord: 'value', newValue: 42 });
+      expect(result.oldValue).toBe(0);
       expect(obj.value).toBe(42);
     });
 
     it('应该支持设置布尔值', () => {
       const obj = { value: false };
-      expect(coordSet(obj, 'value', true)).toBe(true);
+      const result = coordSet({ rootObj: obj, editCoord: 'value', newValue: true });
+      expect(result.oldValue).toBe(false);
       expect(obj.value).toBe(true);
     });
 
     it('应该支持设置数组', () => {
       const obj = { value: [] };
-      expect(coordSet(obj, 'value', [1, 2, 3])).toBe(true);
+      const result = coordSet({ rootObj: obj, editCoord: 'value', newValue: [1, 2, 3] });
+      expect(result.oldValue).toEqual([]);
       expect(obj.value).toEqual([1, 2, 3]);
     });
 
     it('应该支持设置对象', () => {
       const obj = { value: null };
-      expect(coordSet(obj, 'value', { key: 'value' })).toBe(true);
+      const result = coordSet({ rootObj: obj, editCoord: 'value', newValue: { key: 'value' } });
+      expect(result.oldValue).toBeNull();
       expect(obj.value).toEqual({ key: 'value' });
     });
   });
 
   describe('错误处理', () => {
-    it('当路径未匹配且无中间路径时应返回 false', () => {
+    it('当路径未匹配且无中间路径时应返回空reverseParams', () => {
       const obj = { items: null };
-      const result = coordSet(obj, 'items.nested.value', 'test');
-      expect(result).toBe(false);
+      const result = coordSet({ rootObj: obj, editCoord: 'items.nested.value', newValue: 'test' });
+      expect(result.oldValue).toBeUndefined();
+      expect(result.reverseParams).toBeNull();
     });
   });
 
   describe('边界情况', () => {
     it('空对象匹配不到不处理，与lodash set不完全相同', () => {
       const obj = {};
-      const result = coordSet(obj, 'name', 'test');
-      expect(result).toBe(false);
+      const result = coordSet({ rootObj: obj, editCoord: 'name', newValue: 'test' });
+      expect(result.oldValue).toBeUndefined();
+      expect(result.reverseParams).toBeNull();
       expect(obj).toEqual({});
     });
 
     it('应该处理顶层数组路径', () => {
       const arr = [1, 2, 3];
-      const result = coordSet(arr, '[0]', 99);
-      expect(result).toBe(true);
+      const result = coordSet({ rootObj: arr, editCoord: '[0]', newValue: 99 });
+      expect(result.oldValue).toBe(1);
+      expect(result.reverseParams).not.toBeNull();
       expect(arr[0]).toBe(99);
     });
 
     it('应该处理数组中的对象路径', () => {
       const obj = { users: [{ name: 'A' }, { name: 'B' }] };
-      const result = coordSet(obj, 'users[1].name', 'NewB');
-      expect(result).toBe(true);
+      const result = coordSet({ rootObj: obj, editCoord: 'users[1].name', newValue: 'NewB' });
+      expect(result.oldValue).toBe('B');
+      expect(result.reverseParams).not.toBeNull();
       expect(obj?.users[1]?.name).toBe('NewB');
     });
   });
@@ -626,8 +639,9 @@ describe('jsonPathSet', () => {
   describe('类型测试', () => {
     it('应该正确推断类型', () => {
       const obj = { value: 1 };
-      const result = coordSet(obj, 'value', 'string');
-      expect(result).toBe(true);
+      const result = coordSet({ rootObj: obj, editCoord: 'value', newValue: 'string' });
+      expect(result.oldValue).toBe(1);
+      expect(obj.value).toBe('string');
     });
 
     it('应该支持泛型类型', () => {
@@ -636,9 +650,61 @@ describe('jsonPathSet', () => {
         name: string;
       }
       const obj: { user: User } = { user: { id: 1, name: 'test' } };
-      const result = coordSet(obj, 'user', { id: 2, name: 'updated' } as User);
-      expect(result).toBe(true);
+      const result = coordSet<User>({ rootObj: obj, editCoord: 'user', newValue: { id: 2, name: 'updated' } });
+      expect(result.oldValue).toEqual({ id: 1, name: 'test' });
       expect(obj.user).toEqual({ id: 2, name: 'updated' });
+    });
+  });
+
+  describe('逆操作测试', () => {
+    it('正向设置后，逆向应该能完全还原', () => {
+      const obj = { value: 10 };
+      const original = obj.value;
+
+      const result = coordSet({ rootObj: obj, editCoord: 'value', newValue: 20 });
+      expect(obj.value).toBe(20);
+
+      expect(result.reverseParams).not.toBeNull();
+      coordSet(result.reverseParams!);
+      expect(obj.value).toBe(original);
+    });
+
+    it('正向设置嵌套路径后，逆向应该能完全还原', () => {
+      const obj = { data: { items: [{ value: 1 }, { value: 2 }] } };
+      const original = JSON.stringify(obj);
+
+      const result = coordSet({ rootObj: obj, editCoord: 'data.items[0].value', newValue: 99 });
+      expect(obj?.data?.items[0]?.value).toBe(99);
+
+      coordSet(result.reverseParams!);
+      expect(JSON.stringify(obj)).toBe(original);
+    });
+
+    it('正向多次设置后连续逆向应该能完全还原', () => {
+      const obj = { a: 1, b: 2 };
+
+      const result1 = coordSet({ rootObj: obj, editCoord: 'a', newValue: 10 });
+      expect(obj.a).toBe(10);
+
+      const result2 = coordSet({ rootObj: obj, editCoord: 'b', newValue: 20 });
+      expect(obj.b).toBe(20);
+
+      coordSet(result2.reverseParams!);
+      expect(obj.b).toBe(2);
+
+      coordSet(result1.reverseParams!);
+      expect(obj.a).toBe(1);
+    });
+
+    it('正向设置复杂对象后，逆向应该能完全还原', () => {
+      const obj = { user: { id: 1, name: 'test', tags: ['a', 'b'] } };
+      const original = JSON.stringify(obj);
+
+      const result = coordSet({ rootObj: obj, editCoord: 'user', newValue: { id: 2, name: 'updated' } });
+      expect(obj.user).toEqual({ id: 2, name: 'updated' });
+
+      coordSet(result.reverseParams!);
+      expect(JSON.stringify(obj)).toBe(original);
     });
   });
 });

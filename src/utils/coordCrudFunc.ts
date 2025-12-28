@@ -12,6 +12,34 @@ export interface CoordSpliceResult<T = unknown> {
   deletedItems: T[]; // 被splice删除的项
   reverseParams: CoordSpliceParams | null; // 逆操作参数（用于撤销splice操作）
 }
+
+export interface CoordSetParams {
+  rootObj: Record<string, unknown> | Array<unknown>,
+  editCoord: string,
+  newValue: unknown
+}
+
+export interface CoordSetResult<T = unknown> {
+  oldValue: T; // 被覆盖的旧值
+  reverseParams: CoordSetParams | null; // 逆操作参数（用于撤销set操作）
+}
+
+/**
+ * 获取set操作的逆操作参数（用于撤销set操作）
+ * @param param set参数
+ * @param oldValue 被覆盖的旧值
+ * @returns 逆操作参数
+ */
+export function getCoordSetReverseParams(
+  param: CoordSetParams,
+  oldValue: unknown,
+): CoordSetParams {
+  return {
+    rootObj: param.rootObj,
+    editCoord: param.editCoord,
+    newValue: oldValue,
+  };
+}
 /**
  * 获取数组splice操作的逆操作参数（用于撤销splice操作）
  * @param targetArrayOriginLength 数组被splice前的原始长度
@@ -89,22 +117,31 @@ export function coordSplice<T = unknown>(
 }
 
 export function coordSet<T = unknown>(
-  rootObj: Record<string, unknown> | Array<unknown>,
-  editCoord: string,
-  newValue: T
-): boolean {
+  param: CoordSetParams
+): CoordSetResult<T> {
   try {
+    const { rootObj, editCoord, newValue } = param;
     const oldValue = get(rootObj, editCoord);
 
     if (oldValue === undefined) {
       console.warn(`coordSet: 路径 "${editCoord}" 未匹配到任何节点`);
-      return false;
+      return {
+        oldValue: undefined as T,
+        reverseParams: null,
+      };
     }
 
     set(rootObj, editCoord, newValue);
-    return true;
+
+    return {
+      oldValue: oldValue as T,
+      reverseParams: getCoordSetReverseParams(param, oldValue),
+    };
   } catch (error) {
     console.error(`coordSet 执行失败：`, error);
-    return false;
+    return {
+      oldValue: undefined as T,
+      reverseParams: null,
+    };
   }
 }
