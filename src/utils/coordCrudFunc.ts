@@ -1,32 +1,78 @@
 import { get, set } from 'lodash';
 
-export function coordSplice<T = unknown>(
+export interface CoordSpliceParams {
   rootObj: Record<string, unknown> | Array<unknown>,
   editCoord: string,
   start: number,
   deleteCount: number,
-  ...items: unknown[]
-): unknown[] {
+  items: unknown[]
+}
+
+export interface CoordSpliceResult<T = unknown> {
+  deletedItems: T[]; // 被splice删除的项
+  reverseParams: CoordSpliceParams | null; // 逆操作参数（用于撤销splice操作）
+}
+/**
+ * 获取数组splice操作的逆操作参数（用于撤销splice操作）
+ * @param param splice参数
+ * @param deletedItems 被删除的项
+ * @returns 逆操作参数
+ */
+export function getCoordSpliceReverseParams(
+  param: CoordSpliceParams,
+  deletedItems: unknown[],
+): CoordSpliceParams {
+  return {
+    rootObj: param.rootObj,
+    editCoord: param.editCoord,
+    start: param.start,
+    deleteCount: param.items.length,
+    items: deletedItems,
+  };
+}
+
+/**
+ * 执行数组的splice操作，并返回逆操作参数（用于撤销splice操作）
+ * @param param splice参数
+ * @returns 包含被删除项和逆操作参数的结果对象
+ */
+export function coordSplice<T = unknown>(
+  param: CoordSpliceParams
+): CoordSpliceResult<T> {
   try {
+    const { rootObj, editCoord, start, deleteCount, items } = param;
     const target = get(rootObj, editCoord);
 
     if (target === undefined) {
       console.warn(`coordSplice: 路径 "${editCoord}" 未匹配到任何对象`);
-      return [];
+      return {
+        deletedItems: [],
+        reverseParams: null,
+      };
     }
 
     if (!Array.isArray(target)) {
       console.error(`coordSplice: 路径 "${editCoord}" 匹配到非数组类型，类型为 ${typeof target}`);
-      return [];
+      return {
+        deletedItems: [],
+        reverseParams: null,
+      };
     }
 
     const targetArray = target as T[];
     const deletedItems = targetArray.splice(start, deleteCount, ...(items as T[]));
 
-    return deletedItems as T[];
+    return {
+      deletedItems: deletedItems as T[],
+      // 逆操作参数：将删除的项插入到原位置
+      reverseParams: getCoordSpliceReverseParams(param, deletedItems)
+    };
   } catch (error) {
     console.error(`coordSplice 执行异常：`, error);
-    return [];
+    return {
+      deletedItems: [],
+      reverseParams: null,
+    };
   }
 }
 
