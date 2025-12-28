@@ -650,7 +650,7 @@ describe('jsonPathSet', () => {
         name: string;
       }
       const obj: { user: User } = { user: { id: 1, name: 'test' } };
-      const result = coordSet<User>({ rootObj: obj, editCoord: 'user', newValue: { id: 2, name: 'updated' } });
+      const result = coordSet({ rootObj: obj, editCoord: 'user', newValue: { id: 2, name: 'updated' } });
       expect(result.oldValue).toEqual({ id: 1, name: 'test' });
       expect(obj.user).toEqual({ id: 2, name: 'updated' });
     });

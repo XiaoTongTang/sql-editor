@@ -6,7 +6,7 @@
           <template #header>
             <div style="display: flex; flex-direction: column; gap: 2px; width: 100%">
               <div style="display: flex; justify-content: space-between; width: 100%">
-                <el-button type="success" size="small" @click="addColumn(index)"> 加列 </el-button>
+                <el-button type="success" size="small" @click="addColumn2(index)"> 加列 </el-button>
                 <el-button type="danger" size="small" @click="deleteColumn(index)">
                   删列
                 </el-button>
@@ -57,7 +57,7 @@
                 <el-switch v-model="fullDataEditButton" />
               </div>
               <div style="display: flex; gap: 5px">
-                <el-button type="success" size="small" @click="addColumn(tableColumns.length - 1)">
+                <el-button type="success" size="small" @click="addColumn2(tableColumns.length - 1)">
                   加列
                 </el-button>
                 <el-button type="primary" size="small" @click="insertRow(-1)">加行</el-button>
@@ -167,6 +167,9 @@ const addColumn = (index: number) => {
       }
     })
   }
+}
+const addColumn2 = (index: number) => {
+  editorTreeStore.addColumnToAst(props.astId, index)
 }
 
 // 删除列

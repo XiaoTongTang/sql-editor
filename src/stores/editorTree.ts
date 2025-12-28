@@ -13,8 +13,8 @@ export interface AstItem {
 }
 // 操作栈中的元素
 export interface OptStackItem2 {
-  thisOperate: EditOperate2 // 本次操作
-  inverseOperate: EditOperate2 // 本次操作的逆操作(用于撤销本次操作)
+  thisOperate: EditOperate2 // 本次操作（按顺序从前往后执行即可复现业务操作）
+  inverseOperate: EditOperate2 // 本次操作的逆操作(用于撤销本次操作)（按顺序从前往后执行即可复现逆业务操作）
 }
 // 一次业务编辑操作（备注：一次业务编辑操作下面会有很多原子crud操作，存放在operArray数组中，按顺序执行operArray等价于一次业务编辑操作）
 export interface EditOperate2 {
@@ -296,5 +296,64 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
     return true
   }
 
-  return { editorAstList, optStack, optStack2, getAstItem, sqlToAst, astToSql, setAstColumn, undoOpt, redoOpt, undo2, redo2, setAstColumn2 }
+  // 添加列
+  const addColumnToAst = (astId: string, index: number) => {
+    // 用astId查询这是第几个AST项
+    if (!editorAstList.value) {
+      return false
+    }
+    const { astItem, index: astIndex } = getAstItem(astId)
+    if (!astItem || !astItem.ast) {
+      return false
+    }
+    const optStackItem: OptStackItem2 = {
+      thisOperate: { operArray: [] },
+      inverseOperate: { operArray: [] }
+    }
+
+    const addColumnOp = {
+      rootObj: editorAstList.value,
+      editCoord: `[${astIndex}].ast.columns`,
+      start: index + 1,
+      deleteCount: 0,
+      items: ['新列'], // 插入的新列头
+    }
+    // 调用splice函数更新列头，并计算出逆操作的参数
+    const addColumnsResult = coordSplice(addColumnOp)
+    if (!addColumnsResult.reverseParams) {
+      return false
+    }
+    optStackItem.thisOperate.operArray.push(addColumnOp) // 向 ”正向操作列表“ 中，添加 ”添加列“ 操作
+    optStackItem.inverseOperate.operArray.unshift(addColumnsResult.reverseParams) // 向 ”逆操作列表“ 中，添加 ”删除列“（即添加列的逆操作） 操作
+    
+    if (astItem.ast.values && astItem.ast.values.type === 'values') {
+      // 遍历所有数据行
+      astItem.ast.values.values.forEach((row, rowIndex) => {
+        if (row.value && Array.isArray(row.value)) {
+          // 逐一插入新增的这一列的数据
+          const addValueDataOp = {
+            rootObj: editorAstList.value,
+            editCoord: `[${astIndex}].ast.values.values[${rowIndex}].value`,
+            start: index + 1,
+            deleteCount: 0,
+            items: [{
+              type: 'single_quote_string',
+              value: '',
+            }] // 新的数据（注意，这里是每次都新建完全不同的一个新对象）
+          }
+          const addDataResult = coordSplice(addValueDataOp)
+          if (!addDataResult.reverseParams) {
+            return false
+          }
+          optStackItem.thisOperate.operArray.push(addValueDataOp) // 向 ”正向操作列表“ 中，添加 ”添加数据“ 操作
+          optStackItem.inverseOperate.operArray.unshift(addDataResult.reverseParams) // 向 ”逆操作列表“ 中，添加 ”删除数据“（即删除数据的逆操作） 操作
+        }
+      })
+    }
+    // 记录操作栈
+    otherOptPushOptStack2(optStackItem)
+    return true
+  }
+
+  return { editorAstList, optStack, optStack2, getAstItem, sqlToAst, astToSql, setAstColumn, undoOpt, redoOpt, undo2, redo2, setAstColumn2, addColumnToAst }
 })

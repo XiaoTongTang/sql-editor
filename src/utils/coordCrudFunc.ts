@@ -1,7 +1,7 @@
 import { get, set } from 'lodash';
 
 export interface CoordSpliceParams {
-  rootObj: Record<string, unknown> | Array<unknown>,
+  rootObj: object | Array<unknown> | null,
   editCoord: string,
   start: number,
   deleteCount: number,
@@ -14,13 +14,13 @@ export interface CoordSpliceResult<T = unknown> {
 }
 
 export interface CoordSetParams {
-  rootObj: Record<string, unknown> | Array<unknown>,
+  rootObj: object | Array<unknown> | null,
   editCoord: string,
   newValue: unknown
 }
 
-export interface CoordSetResult<T = unknown> {
-  oldValue: T; // 被覆盖的旧值
+export interface CoordSetResult {
+  oldValue: unknown; // 被覆盖的旧值
   reverseParams: CoordSetParams | null; // 逆操作参数（用于撤销set操作）
 }
 
@@ -125,9 +125,9 @@ export function getCoordSpliceReverseParams(
  * @param param splice参数
  * @returns 包含被删除项和逆操作参数的结果对象
  */
-export function coordSplice<T = unknown>(
+export function coordSplice(
   param: CoordSpliceParams
-): CoordSpliceResult<T> {
+): CoordSpliceResult {
   try {
     const { rootObj, editCoord, start, deleteCount, items } = param;
     const target = get(rootObj, editCoord);
@@ -148,12 +148,12 @@ export function coordSplice<T = unknown>(
       };
     }
 
-    const targetArray = target as T[];
+    const targetArray = target;
     const targetArrayOriginLength = targetArray.length;
-    const deletedItems = targetArray.splice(start, deleteCount, ...(items as T[]));
+    const deletedItems = targetArray.splice(start, deleteCount, ...items);
 
     return {
-      deletedItems: deletedItems as T[],
+      deletedItems: deletedItems,
       // 逆操作参数：将删除的项插入到原位置
       reverseParams: getCoordSpliceReverseParams(targetArrayOriginLength, param, deletedItems)
     };
@@ -166,17 +166,23 @@ export function coordSplice<T = unknown>(
   }
 }
 
-export function coordSet<T = unknown>(
+export function coordSet(
   param: CoordSetParams
-): CoordSetResult<T> {
+): CoordSetResult {
   try {
     const { rootObj, editCoord, newValue } = param;
+    if(!rootObj) {
+      return {
+        oldValue: undefined,
+        reverseParams: null,
+      };
+    }
     const oldValue = get(rootObj, editCoord);
 
     if (oldValue === undefined) {
       console.warn(`coordSet: 路径 "${editCoord}" 未匹配到任何节点`);
       return {
-        oldValue: undefined as T,
+        oldValue: undefined,
         reverseParams: null,
       };
     }
@@ -184,13 +190,13 @@ export function coordSet<T = unknown>(
     set(rootObj, editCoord, newValue);
 
     return {
-      oldValue: oldValue as T,
+      oldValue: oldValue,
       reverseParams: getCoordSetReverseParams(param, oldValue),
     };
   } catch (error) {
     console.error(`coordSet 执行失败：`, error);
     return {
-      oldValue: undefined as T,
+      oldValue: undefined,
       reverseParams: null,
     };
   }
