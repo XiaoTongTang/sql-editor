@@ -43,11 +43,16 @@
               disabled 
               size="small"
             />
-            <div v-if="fullDataEditButton" style="display: flex; justify-content: space-between; width: 100%">
-              <div @click="handleChangeType($index, index, 'null')" class="clickableText">NULL</div>
-              <div @click="handleChangeType($index, index, 'single_quote_string')" class="clickableText">STR</div>
-              <div @click="handleChangeType($index, index, 'number')" class="clickableText">NUM</div>
-            </div>
+            <select
+              v-if="fullDataEditButton"
+              :name="'changeTypeSelector' + $index + '-' + index"
+              :value="tableData[$index]?.[index]?.type"
+              @change="handleChangeType($index, index, ($event.target as HTMLSelectElement).value as ('null' | 'single_quote_string' | 'number'))"
+            >
+              <option value="null">NULL</option>
+              <option value="single_quote_string">STR</option> <!-- 无需手动写 selected，v-model 自动控制 -->
+              <option value="number">NUM</option>
+            </select>
           </template>
         </el-table-column>
         <el-table-column fixed="right" width="140">
@@ -203,38 +208,7 @@ const handleTableDataInput = (rowIndex: number, colIndex: number, value: string 
  * @param type 新的数据类型
  */
 const handleChangeType = (rowIndex: number, colIndex: number, type: 'number' | 'single_quote_string' | 'null') => {
-  if (!parsedAst.value || !parsedAst.value.values || parsedAst.value.values.type !== 'values') {
-    console.log('AST树不存在:', parsedAst.value)
-    return
-  }
-  if (!parsedAst.value!.values!.values[rowIndex]?.value || !parsedAst.value!.values!.values[rowIndex].value[colIndex]) {
-    console.log('此行列数据不存在:', rowIndex, colIndex)
-    return
-  }
-  // STEP1 如果此列已经是指定类型,则无需处理
-  if (parsedAst.value!.values!.values[rowIndex].value[colIndex].type === type) {
-    console.log('此行列数据已为指定类型:', type)
-    return
-  }
-  // STEP2 否则，将这一列的值设置为指定类型
-  // STEP2.1 构造新值
-  let newValue = null;
-  switch (type) {
-    case 'number':
-      newValue = 0;
-      break;
-    case 'single_quote_string':
-      newValue = '';
-      break;
-    case 'null':
-      newValue = null;
-      break;
-  }
-  // STEP2.2 将这一列的值设置为新值
-  parsedAst.value!.values!.values[rowIndex].value[colIndex] = {
-    type: type,
-    value: newValue,
-  }
+  editorTreeStore.handleChangeType(props.astId, rowIndex, colIndex, type)
 }
 </script>
 

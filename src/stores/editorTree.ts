@@ -581,6 +581,68 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
     otherOptPushOptStack2(optStackItem)
     return true
   }
+
+  /**
+   * 处理指定行指定列的数据类型变更(直接修改AST)
+   * @param rowIndex 行索引
+   * @param colIndex 列索引
+   * @param type 新的数据类型
+   */
+  const handleChangeType = (astId: string, rowIndex: number, colIndex: number, type: 'number' | 'single_quote_string' | 'null') => {
+    const { astItem, index: astIndex } = getAstItem(astId)
+    // STEP0 创建一个空的栈项，用于记录操作栈
+    const optStackItem: OptStackItem2 = {
+      thisOperate: { operArray: [] },
+      inverseOperate: { operArray: [] },
+    }
+    if (!astItem || !astItem.ast || !astItem.ast.values || astItem.ast.values.type !== 'values') {
+      console.log('AST树不存在:', astId)
+      return
+    }
+    if (!astItem.ast.values.values[rowIndex]?.value || !astItem.ast.values.values[rowIndex].value[colIndex]) {
+      console.log('此行列数据不存在:', rowIndex, colIndex)
+      return
+    }
+    // STEP1 如果此列已经是指定类型,则无需处理
+    if (astItem.ast.values.values[rowIndex].value[colIndex].type === type) {
+      console.log('此行列数据已为指定类型:', type)
+      return
+    }
+    // STEP2 否则，将这一列的值设置为指定类型
+    // STEP2.1 构造新值
+    let newValue = null;
+    switch (type) {
+      case 'number':
+        newValue = 0;
+        break;
+      case 'single_quote_string':
+        newValue = '';
+        break;
+      case 'null':
+        newValue = null;
+        break;
+    }
+    // STEP2.1 构建 ”坐标“ + 新值 操作项
+    const modifyDataTypeOp = {
+      rootObj: editorAstList.value,
+      editCoord: `[${astIndex}].ast.values.values[${rowIndex}].value[${colIndex}]`,
+      newValue: {
+        type: type,
+        value: newValue,
+      }
+    }
+    // STEP2.2 将这一列的值设置为新类型
+    const modifyResult = coordSet(modifyDataTypeOp)
+    if (!modifyResult.reverseParams) {
+      return false
+    }
+    // STEP2.3 向操作栈item中记录修改数据类型的crud操作
+    optStackItem.thisOperate.operArray.push(modifyDataTypeOp) // 向 ”正向操作列表“ 中，添加 ”修改数据类型“ 操作
+    optStackItem.inverseOperate.operArray.unshift(modifyResult.reverseParams) // 向 ”逆操作列表“ 中，添加 ”修改数据类型“（即修改数据类型的逆操作） 操作
+    // STEP2.4 将操作栈item push进操作栈中
+    otherOptPushOptStack2(optStackItem)
+    return true
+  }
   return {
     editorAstList,
     optStack,
@@ -598,6 +660,7 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
     deleteColumnFromAst,
     insertRowToAst,
     deleteRowFromAst,
-    modifyAstRowData
+    modifyAstRowData,
+    handleChangeType
   }
 })
