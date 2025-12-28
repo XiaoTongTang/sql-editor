@@ -6,14 +6,14 @@
           <template #header>
             <div style="display: flex; flex-direction: column; gap: 2px; width: 100%">
               <div style="display: flex; justify-content: space-between; width: 100%">
-                <el-button type="success" size="small" @click="addColumn2(index)"> 加列 </el-button>
+                <el-button type="success" size="small" @click="addColumn(index)"> 加列 </el-button>
                 <el-button type="danger" size="small" @click="deleteColumn(index)">
                   删列
                 </el-button>
               </div>
               <el-input
                 :model-value="tableColumns[index]"
-                @input="handleHeaderInput3(index, $event)"
+                @input="handleHeaderInput(index, $event)"
                 placeholder="列名"
                 size="small"
                 style="width: 100%"
@@ -62,7 +62,7 @@
                 <el-switch v-model="fullDataEditButton" />
               </div>
               <div style="display: flex; gap: 5px">
-                <el-button type="success" size="small" @click="addColumn2(tableColumns.length - 1)">
+                <el-button type="success" size="small" @click="addColumn(tableColumns.length - 1)">
                   加列
                 </el-button>
                 <el-button type="primary" size="small" @click="insertRow(-1)">加行</el-button>
@@ -128,13 +128,12 @@ const tableColumns = computed(() => {
  * @param index 列索引
  * @param newValue 新的列名
  */
-const handleHeaderInput3 = (index: number, newValue: string) => {
-  editorTreeStore.setAstColumn2(props.astId, index, newValue)
-  console.log(editorTreeStore.optStack2)
+const handleHeaderInput = (index: number, newValue: string) => {
+  editorTreeStore.setAstColumn(props.astId, index, newValue)
 }
 
 // 添加列
-const addColumn2 = (index: number) => {
+const addColumn = (index: number) => {
   editorTreeStore.addColumnToAst(props.astId, index)
 }
 
