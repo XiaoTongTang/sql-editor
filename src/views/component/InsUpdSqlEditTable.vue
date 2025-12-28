@@ -44,9 +44,9 @@
               size="small"
             />
             <div v-if="fullDataEditButton" style="display: flex; justify-content: space-between; width: 100%">
-              <div @click="handleSetNull($index, index)" class="clickableText">NULL</div>
-              <div @click="handleSetStr($index, index)" class="clickableText">STR</div>
-              <div @click="handleSetNum($index, index)" class="clickableText">NUM</div>
+              <div @click="handleChangeType($index, index, 'null')" class="clickableText">NULL</div>
+              <div @click="handleChangeType($index, index, 'single_quote_string')" class="clickableText">STR</div>
+              <div @click="handleChangeType($index, index, 'number')" class="clickableText">NUM</div>
             </div>
           </template>
         </el-table-column>
@@ -193,83 +193,47 @@ const tableData = computed(() => {
  * @param value 输入值
  */
 const handleTableDataInput = (rowIndex: number, colIndex: number, value: string | number | null | undefined) => {
-  if (!parsedAst.value || !parsedAst.value.values || parsedAst.value.values.type !== 'values') {
-    console.log('AST树不存在:', parsedAst.value)
-    return
-  }
-
-  if (parsedAst.value!.values!.values[rowIndex]?.value) {
-    // 找到对应的行与列
-    const valueNode: BlockData = parsedAst.value!.values!.values[rowIndex].value[colIndex]
-    // 判断是否为字符串或数字类型
-    if (valueNode.type === 'single_quote_string') {
-      valueNode.value = String(value)
-    } else if(valueNode.type === 'number') {
-      valueNode.value = Number(value)
-    } else {
-      console.log('不支持的类型:', valueNode.type)
-    }
-  }
+  editorTreeStore.modifyAstRowData(props.astId, rowIndex, colIndex, value)
 }
+
 /**
- * 设置指定行指定列的值为NULL(直接修改AST)
+ * 处理指定行指定列的数据类型变更(直接修改AST)
  * @param rowIndex 行索引
  * @param colIndex 列索引
+ * @param type 新的数据类型
  */
-const handleSetNull = (rowIndex: number, colIndex: number) => {
+const handleChangeType = (rowIndex: number, colIndex: number, type: 'number' | 'single_quote_string' | 'null') => {
   if (!parsedAst.value || !parsedAst.value.values || parsedAst.value.values.type !== 'values') {
     console.log('AST树不存在:', parsedAst.value)
     return
   }
-
-  if (parsedAst.value!.values!.values[rowIndex]?.value) {
-    // 找到对应的行与列,将这一列的值设置为NULL
-    parsedAst.value!.values!.values[rowIndex].value[colIndex] = {
-      type: 'null',
-      value: null,
-    }
-  }
-}
-/**
- * 设置指定行指定列的值为字符串(直接修改AST)
- * @param rowIndex 行索引
- * @param colIndex 列索引
- */
-const handleSetStr = (rowIndex: number, colIndex: number) => {
-  if (!parsedAst.value || !parsedAst.value.values || parsedAst.value.values.type !== 'values') {
-    console.log('AST树不存在:', parsedAst.value)
+  if (!parsedAst.value!.values!.values[rowIndex]?.value || !parsedAst.value!.values!.values[rowIndex].value[colIndex]) {
+    console.log('此行列数据不存在:', rowIndex, colIndex)
     return
   }
-
-  if (parsedAst.value!.values!.values[rowIndex]?.value) {
-    // 如果此列已经是字符串类型,则无需处理
-    if (parsedAst.value!.values!.values[rowIndex].value[colIndex].type === 'single_quote_string') {
-      return
-    }
-    // 否则，将这一列的值设置为字符串
-    parsedAst.value!.values!.values[rowIndex].value[colIndex] = {
-      type: 'single_quote_string',
-      value: '',
-    }
-  }
-}
-
-const handleSetNum = (rowIndex: number, colIndex: number) => {
-  if (!parsedAst.value || !parsedAst.value.values || parsedAst.value.values.type !== 'values') {
-    console.log('AST树不存在:', parsedAst.value)
+  // STEP1 如果此列已经是指定类型,则无需处理
+  if (parsedAst.value!.values!.values[rowIndex].value[colIndex].type === type) {
+    console.log('此行列数据已为指定类型:', type)
     return
   }
-
-  if (parsedAst.value!.values!.values[rowIndex]?.value) {
-    // 如果此列已经是数字类型,则无需处理
-    if (parsedAst.value!.values!.values[rowIndex].value[colIndex].type === 'number') {
-      return
-    }
-    // 否则，将这一列的值设置为数字
-    parsedAst.value!.values!.values[rowIndex].value[colIndex] = {
-      type: 'number',
-      value: 0,
-    }
+  // STEP2 否则，将这一列的值设置为指定类型
+  // STEP2.1 构造新值
+  let newValue = null;
+  switch (type) {
+    case 'number':
+      newValue = 0;
+      break;
+    case 'single_quote_string':
+      newValue = '';
+      break;
+    case 'null':
+      newValue = null;
+      break;
+  }
+  // STEP2.2 将这一列的值设置为新值
+  parsedAst.value!.values!.values[rowIndex].value[colIndex] = {
+    type: type,
+    value: newValue,
   }
 }
 </script>

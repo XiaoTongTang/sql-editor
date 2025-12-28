@@ -53,6 +53,11 @@ export interface OperateStack {
   pointer: number // 操作栈指针(撤销时，不会直接删除栈顶元素，而是将指针减一（以备可能的重做操作），只有撤销后再执行一次新编辑后，才会将指针以上的所有操作出栈)
 }
 
+interface BlockData {
+  type: 'single_quote_string' | 'number' | 'null'
+  value: string | number | null
+}
+
 export const useEditorTreeStore = defineStore('editorTree', () => {
   const editorAstList = ref<AstItem[] | null>(null)
   const optStack = ref<OperateStack>({
@@ -525,6 +530,57 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
     // STEP4 将操作栈item push进操作栈中
     otherOptPushOptStack2(optStackItem)
   }
+  /**
+   * 处理表格数据输入事件(直接修改AST)
+   * @param rowIndex 行索引
+   * @param colIndex 列索引
+   * @param value 输入值
+   */
+  const modifyAstRowData = (astId: string, rowIndex: number, colIndex: number, value: string | number | null | undefined) => {
+    const { astItem, index: astIndex } = getAstItem(astId)
+    if (!astItem || !astItem.ast || !astItem.ast.values || astItem.ast.values.type !== 'values') {
+      console.log('AST树不存在')
+      return
+    }
+    // STEP0 创建一个空的栈项，用于记录操作栈
+    const optStackItem: OptStackItem2 = {
+      thisOperate: { operArray: [] },
+      inverseOperate: { operArray: [] },
+    }
+    if (!astItem.ast.values.values[rowIndex]?.value) {
+      console.log('行不存在')
+      return false
+    }
+    // STEP1 找到对应的行与列
+    const valueNode: BlockData = astItem.ast.values.values[rowIndex].value[colIndex]
+    let tempValue = value
+    // STEP2 判断是否为字符串或数字类型，进行强制转换处理
+    if (valueNode.type === 'single_quote_string') {
+      tempValue = String(value)
+    } else if(valueNode.type === 'number') {
+      tempValue = Number(value)
+    } else {
+      console.log('不支持的类型:', valueNode.type)
+      return false
+    }
+    // STEP3 构建 ”坐标“ + 新值 操作项
+    const modifyRowDataOp = {
+      rootObj: editorAstList.value,
+      editCoord: `[${astIndex}].ast.values.values[${rowIndex}].value[${colIndex}].value`,
+      newValue: tempValue
+    }
+    // STEP4 调用 ”坐标“ + 新值 操作项 进行修改
+    const modifyResult = coordSet(modifyRowDataOp)
+    if (!modifyResult.reverseParams) {
+      return false
+    }
+    // STEP5 向操作栈item中记录修改行数据的crud操作
+    optStackItem.thisOperate.operArray.push(modifyRowDataOp) // 向 ”正向操作列表“ 中，添加 ”修改行数据“ 操作
+    optStackItem.inverseOperate.operArray.unshift(modifyResult.reverseParams) // 向 ”逆操作列表“ 中，添加 ”修改行数据“（即修改行数据的逆操作） 操作
+    // STEP6 将操作栈item push进操作栈中
+    otherOptPushOptStack2(optStackItem)
+    return true
+  }
   return {
     editorAstList,
     optStack,
@@ -542,5 +598,6 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
     deleteColumnFromAst,
     insertRowToAst,
     deleteRowFromAst,
+    modifyAstRowData
   }
 })
