@@ -123,84 +123,19 @@ const tableColumns = computed(() => {
  * @param index 列索引
  * @param newValue 新的列名
  */
-// const handleHeaderInput = (index: number, newValue: string) => {
-//   if (!parsedAst.value || !parsedAst.value.columns || !Array.isArray(parsedAst.value.columns)) {
-//     return
-//   }
-//   parsedAst.value.columns[index] = newValue
-// }
-// const handleHeaderInput2 = (index: number, newValue: string) => {
-//   editorTreeStore.setAstColumn(props.astId, {
-//     index,
-//     newValue,
-//   })
-//   console.log(editorTreeStore.optStack)
-// }
 const handleHeaderInput3 = (index: number, newValue: string) => {
   editorTreeStore.setAstColumn2(props.astId, index, newValue)
   console.log(editorTreeStore.optStack2)
 }
 
 // 添加列
-const addColumn = (index: number) => {
-  if (!parsedAst.value || !parsedAst.value.columns || !Array.isArray(parsedAst.value.columns)) {
-    return
-  }
-
-  // 复制当前的列数组
-  const newColumns = [...tableColumns.value]
-  // 在指定位置插入新的列名
-  newColumns.splice(index + 1, 0, '新列')
-  // 更新列头
-  parsedAst.value.columns = newColumns
-
-  // 同步更新数据部分
-  if (parsedAst.value.values && parsedAst.value.values.type === 'values') {
-    // 遍历所有数据行
-    parsedAst.value.values.values.forEach((row) => {
-      if (row.value && Array.isArray(row.value)) {
-        // 在对应位置插入空值
-        row.value.splice(index + 1, 0, {
-          type: 'single_quote_string',
-          value: '',
-        })
-      }
-    })
-  }
-}
 const addColumn2 = (index: number) => {
   editorTreeStore.addColumnToAst(props.astId, index)
 }
 
 // 删除列
 const deleteColumn = (index: number) => {
-  if (!parsedAst.value || !parsedAst.value.columns || !Array.isArray(parsedAst.value.columns)) {
-    return
-  }
-
-  // 确保至少保留一列
-  if (tableColumns.value.length <= 1) {
-    console.error('至少需要保留一列')
-    return
-  }
-
-  // 复制当前的列数组
-  const newColumns = [...tableColumns.value]
-  // 删除指定位置的列名
-  newColumns.splice(index, 1)
-  // 更新列头
-  parsedAst.value.columns = newColumns
-
-  // 同步更新数据部分
-  if (parsedAst.value.values && parsedAst.value.values.type === 'values') {
-    // 遍历所有数据行
-    parsedAst.value.values.values.forEach((row) => {
-      if (row.value && Array.isArray(row.value)) {
-        // 删除对应位置的数据
-        row.value.splice(index, 1)
-      }
-    })
-  }
+  editorTreeStore.deleteColumnFromAst(props.astId, index)
 }
 
 // 删除行

@@ -296,7 +296,12 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
     return true
   }
 
-  // 添加列
+  /**
+   * 添加列到AST中
+   * @param astId AST项ID
+   * @param index 要添加的列索引位置（注意：是要添加到该索引的后面）
+   * @returns 是否添加成功
+   */
   const addColumnToAst = (astId: string, index: number) => {
     // 用astId查询这是第几个AST项
     if (!editorAstList.value) {
@@ -306,6 +311,7 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
     if (!astItem || !astItem.ast) {
       return false
     }
+    // STEP0 创建一个空的栈项，用于记录操作栈
     const optStackItem: OptStackItem2 = {
       thisOperate: { operArray: [] },
       inverseOperate: { operArray: [] }
@@ -318,19 +324,20 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
       deleteCount: 0,
       items: ['新列'], // 插入的新列头
     }
-    // 调用splice函数更新列头，并计算出逆操作的参数
+    // STEP1 调用splice函数更新列头，并计算出逆操作的参数
     const addColumnsResult = coordSplice(addColumnOp)
     if (!addColumnsResult.reverseParams) {
       return false
     }
+    // STEP1.1 向操作栈item中记录crud操作
     optStackItem.thisOperate.operArray.push(addColumnOp) // 向 ”正向操作列表“ 中，添加 ”添加列“ 操作
     optStackItem.inverseOperate.operArray.unshift(addColumnsResult.reverseParams) // 向 ”逆操作列表“ 中，添加 ”删除列“（即添加列的逆操作） 操作
     
     if (astItem.ast.values && astItem.ast.values.type === 'values') {
-      // 遍历所有数据行
+      // STEP2 遍历所有数据行
       astItem.ast.values.values.forEach((row, rowIndex) => {
         if (row.value && Array.isArray(row.value)) {
-          // 逐一插入新增的这一列的数据
+          // STEP2.1 逐一插入新增的这一列的数据
           const addValueDataOp = {
             rootObj: editorAstList.value,
             editCoord: `[${astIndex}].ast.values.values[${rowIndex}].value`,
@@ -345,15 +352,86 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
           if (!addDataResult.reverseParams) {
             return false
           }
+          // STEP2.2 向操作栈item中记录插入行数据的crud操作
           optStackItem.thisOperate.operArray.push(addValueDataOp) // 向 ”正向操作列表“ 中，添加 ”添加数据“ 操作
           optStackItem.inverseOperate.operArray.unshift(addDataResult.reverseParams) // 向 ”逆操作列表“ 中，添加 ”删除数据“（即删除数据的逆操作） 操作
         }
       })
     }
-    // 记录操作栈
+    // STEP3 将操作栈item push进操作栈中
+    otherOptPushOptStack2(optStackItem)
+    return true
+  }
+  /**
+   * 从AST中删除列
+   * @param astId AST项ID
+   * @param index 要删除的列索引位置
+   * @returns 是否删除成功
+   */
+  const deleteColumnFromAst = (astId: string, index: number): boolean => {
+    if (!editorAstList.value) {
+      return false
+    }
+    const { astItem, index: astIndex } = getAstItem(astId)
+    if (!astItem || !astItem.ast || !astItem.ast.columns || !Array.isArray(astItem.ast.columns)) {
+      return false
+    }
+    if (astItem.ast.columns.length <= 1) {
+      console.error('至少需要保留一列')
+      return false
+    }
+    if (!astItem || !astItem.ast) {
+      return false
+    }
+    // STEP0 创建一个空的栈项，用于记录操作栈
+    const optStackItem: OptStackItem2 = {
+      thisOperate: { operArray: [] },
+      inverseOperate: { operArray: [] }
+    }
+
+    // STEP1 调用splice函数删除列头，并计算出逆操作的参数
+    const deleteColumnOp = {
+      rootObj: editorAstList.value,
+      editCoord: `[${astIndex}].ast.columns`,
+      start: index,
+      deleteCount: 1,
+      items: [],
+    }
+    const deleteColumnResult = coordSplice(deleteColumnOp)
+    if (!deleteColumnResult.reverseParams) {
+      return false
+    }
+    // STEP1.1 向操作栈item中记录crud操作
+    optStackItem.thisOperate.operArray.push(deleteColumnOp) // 向 ”正向操作列表“ 中，添加 ”删除列“ 操作
+    optStackItem.inverseOperate.operArray.unshift(deleteColumnResult.reverseParams) // 向 ”逆操作列表“ 中，添加 ”添加列“（即删除列的逆操作） 操作
+
+    // STEP2 遍历所有数据行
+    if (astItem.ast.values && astItem.ast.values.type === 'values') {
+      // 遍历所有数据行
+      astItem.ast.values.values.forEach((row, rowIndex) => {
+        if (row.value && Array.isArray(row.value)) {
+          const deleteValueDataOp = {
+            rootObj: editorAstList.value,
+            editCoord: `[${astIndex}].ast.values.values[${rowIndex}].value`,
+            start: index,
+            deleteCount: 1,
+            items: []
+          }
+          // STEP2.1 删除对应列位置的数据
+          const deleteDataResult = coordSplice(deleteValueDataOp)
+          if (!deleteDataResult.reverseParams) {
+            return false
+          }
+          // STEP2.2 向操作栈item中记录删除行数据的crud操作
+          optStackItem.thisOperate.operArray.push(deleteValueDataOp) // 向 ”正向操作列表“ 中，添加 ”删除数据“ 操作
+          optStackItem.inverseOperate.operArray.unshift(deleteDataResult.reverseParams) // 向 ”逆操作列表“ 中，添加 ”添加数据“（即删除数据的逆操作） 操作
+        }
+      })
+    }
+    // STEP3 将操作栈item push进操作栈中
     otherOptPushOptStack2(optStackItem)
     return true
   }
 
-  return { editorAstList, optStack, optStack2, getAstItem, sqlToAst, astToSql, setAstColumn, undoOpt, redoOpt, undo2, redo2, setAstColumn2, addColumnToAst }
+  return { editorAstList, optStack, optStack2, getAstItem, sqlToAst, astToSql, setAstColumn, undoOpt, redoOpt, undo2, redo2, setAstColumn2, addColumnToAst, deleteColumnFromAst }
 })
