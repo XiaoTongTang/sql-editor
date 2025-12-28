@@ -14,18 +14,29 @@ export interface CoordSpliceResult<T = unknown> {
 }
 /**
  * 获取数组splice操作的逆操作参数（用于撤销splice操作）
+ * @param targetArrayOriginLength 数组被splice前的原始长度
  * @param param splice参数
  * @param deletedItems 被删除的项
  * @returns 逆操作参数
  */
 export function getCoordSpliceReverseParams(
+  targetArrayOriginLength: number,
   param: CoordSpliceParams,
   deletedItems: unknown[],
 ): CoordSpliceParams {
+  let recalStart = param.start;
+  if(recalStart < 0) {
+    // 将负数索引转换为正数索引
+    recalStart = targetArrayOriginLength + recalStart;
+    if(recalStart < 0) {
+      recalStart = 0;
+    }
+  }
+
   return {
     rootObj: param.rootObj,
     editCoord: param.editCoord,
-    start: param.start,
+    start: recalStart,
     deleteCount: param.items.length,
     items: deletedItems,
   };
@@ -60,12 +71,13 @@ export function coordSplice<T = unknown>(
     }
 
     const targetArray = target as T[];
+    const targetArrayOriginLength = targetArray.length;
     const deletedItems = targetArray.splice(start, deleteCount, ...(items as T[]));
 
     return {
       deletedItems: deletedItems as T[],
       // 逆操作参数：将删除的项插入到原位置
-      reverseParams: getCoordSpliceReverseParams(param, deletedItems)
+      reverseParams: getCoordSpliceReverseParams(targetArrayOriginLength, param, deletedItems)
     };
   } catch (error) {
     console.error(`coordSplice 执行异常：`, error);

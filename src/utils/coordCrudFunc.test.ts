@@ -1,6 +1,301 @@
 import { describe, expect, it, vi } from 'vitest';
 import { coordSplice, coordSet } from './coordCrudFunc';
 
+describe('coordSplice 逆操作测试', () => {
+  describe('只删除操作的逆操作', () => {
+    it('正向删除元素后，逆向应该能完全还原', () => {
+      const obj = { items: [1, 2, 3, 4, 5] };
+      const original = JSON.stringify(obj.items);
+
+      const result = coordSplice({ rootObj: obj, editCoord: 'items', start: 1, deleteCount: 2, items: [] });
+      expect(result.deletedItems).toEqual([2, 3]);
+      expect(obj.items).toEqual([1, 4, 5]);
+
+      expect(result.reverseParams).not.toBeNull();
+      const undoResult = coordSplice(result.reverseParams!);
+      expect(JSON.stringify(obj.items)).toBe(original);
+      expect(undoResult.deletedItems).toEqual([]);
+    });
+
+    it('正向删除第一个元素后，逆向应该能完全还原', () => {
+      const obj = { items: ['a', 'b', 'c'] };
+      const original = JSON.stringify(obj.items);
+
+      const result = coordSplice({ rootObj: obj, editCoord: 'items', start: 0, deleteCount: 1, items: [] });
+      expect(result.deletedItems).toEqual(['a']);
+      expect(obj.items).toEqual(['b', 'c']);
+
+      coordSplice(result.reverseParams!);
+      expect(JSON.stringify(obj.items)).toBe(original);
+    });
+
+    it('正向删除最后一个元素后，逆向应该能完全还原', () => {
+      const obj = { items: [1, 2, 3] };
+      const original = JSON.stringify(obj.items);
+
+      const result = coordSplice({ rootObj: obj, editCoord: 'items', start: 2, deleteCount: 1, items: [] });
+      expect(result.deletedItems).toEqual([3]);
+      expect(obj.items).toEqual([1, 2]);
+
+      coordSplice(result.reverseParams!);
+      expect(JSON.stringify(obj.items)).toBe(original);
+    });
+
+    it('正向清空数组后，逆向应该能完全还原', () => {
+      const obj = { items: [1, 2, 3] };
+      const original = JSON.stringify(obj.items);
+
+      const result = coordSplice({ rootObj: obj, editCoord: 'items', start: 0, deleteCount: 3, items: [] });
+      expect(result.deletedItems).toEqual([1, 2, 3]);
+      expect(obj.items).toEqual([]);
+
+      coordSplice(result.reverseParams!);
+      expect(JSON.stringify(obj.items)).toBe(original);
+    });
+  });
+
+  describe('只插入操作的逆操作', () => {
+    it('正向插入元素后，逆向应该能完全还原', () => {
+      const obj = { items: [1, 3] };
+      const original = JSON.stringify(obj.items);
+
+      const result = coordSplice({ rootObj: obj, editCoord: 'items', start: 1, deleteCount: 0, items: [2] });
+      expect(result.deletedItems).toEqual([]);
+      expect(obj.items).toEqual([1, 2, 3]);
+
+      expect(result.reverseParams).not.toBeNull();
+      expect(result.reverseParams!.deleteCount).toBe(1);
+      expect(result.reverseParams!.items).toEqual([]);
+
+      coordSplice(result.reverseParams!);
+      expect(JSON.stringify(obj.items)).toBe(original);
+    });
+
+    it('正向从开头插入元素后，逆向应该能完全还原', () => {
+      const obj = { items: [2, 3] };
+      const original = JSON.stringify(obj.items);
+
+      const result = coordSplice({ rootObj: obj, editCoord: 'items', start: 0, deleteCount: 0, items: [1] });
+      expect(obj.items).toEqual([1, 2, 3]);
+
+      coordSplice(result.reverseParams!);
+      expect(JSON.stringify(obj.items)).toBe(original);
+    });
+
+    it('正向从末尾插入多个元素后，逆向应该能完全还原', () => {
+      const obj = { items: [1, 2] };
+      const original = JSON.stringify(obj.items);
+
+      const result = coordSplice({ rootObj: obj, editCoord: 'items', start: 2, deleteCount: 0, items: [3, 4, 5] });
+      expect(obj.items).toEqual([1, 2, 3, 4, 5]);
+
+      coordSplice(result.reverseParams!);
+      expect(JSON.stringify(obj.items)).toBe(original);
+    });
+  });
+
+  describe('删除并插入的逆操作', () => {
+    it('正向替换元素后，逆向应该能完全还原', () => {
+      const obj = { items: [1, 2, 3, 4] };
+      const original = JSON.stringify(obj.items);
+
+      const result = coordSplice({ rootObj: obj, editCoord: 'items', start: 1, deleteCount: 2, items: [9, 8] });
+      expect(result.deletedItems).toEqual([2, 3]);
+      expect(obj.items).toEqual([1, 9, 8, 4]);
+
+      expect(result.reverseParams).not.toBeNull();
+      expect(result.reverseParams!.deleteCount).toBe(2);
+      expect(result.reverseParams!.items).toEqual([2, 3]);
+
+      coordSplice(result.reverseParams!);
+      expect(JSON.stringify(obj.items)).toBe(original);
+    });
+
+    it('正向删除并插入不同数量的元素后，逆向应该能完全还原', () => {
+      const obj = { items: [1, 2, 3, 4, 5] };
+      const original = JSON.stringify(obj.items);
+
+      const result = coordSplice({ rootObj: obj, editCoord: 'items', start: 1, deleteCount: 3, items: ['a'] });
+      expect(result.deletedItems).toEqual([2, 3, 4]);
+      expect(obj.items).toEqual([1, 'a', 5]);
+
+      coordSplice(result.reverseParams!);
+      expect(JSON.stringify(obj.items)).toBe(original);
+    });
+
+    it('正向删除0个插入多个元素后，逆向应该能完全还原', () => {
+      const obj = { items: [1, 2] };
+      const original = JSON.stringify(obj.items);
+
+      const result = coordSplice({ rootObj: obj, editCoord: 'items', start: 1, deleteCount: 0, items: ['a', 'b', 'c'] });
+      expect(result.deletedItems).toEqual([]);
+      expect(obj.items).toEqual([1, 'a', 'b', 'c', 2]);
+
+      coordSplice(result.reverseParams!);
+      expect(JSON.stringify(obj.items)).toBe(original);
+    });
+  });
+
+  describe('负索引的逆操作', () => {
+    it('正向使用负索引删除后，逆向应该能完全还原', () => {
+      const obj = { items: [1, 2, 3, 4, 5] };
+      const original = JSON.stringify(obj.items);
+
+      const result = coordSplice({ rootObj: obj, editCoord: 'items', start: -2, deleteCount: 1, items: [] });
+      expect(result.deletedItems).toEqual([4]);
+      expect(obj.items).toEqual([1, 2, 3, 5]);
+
+      coordSplice(result.reverseParams!);
+      expect(JSON.stringify(obj.items)).toBe(original);
+    });
+
+    it('正向使用负索引删除多个后，逆向应该能完全还原', () => {
+      const obj = { items: [1, 2, 3, 4, 5] };
+      const original = JSON.stringify(obj.items);
+
+      const result = coordSplice({ rootObj: obj, editCoord: 'items', start: -3, deleteCount: 2, items: [] });
+      expect(result.deletedItems).toEqual([3, 4]);
+      expect(obj.items).toEqual([1, 2, 5]);
+      console.log(obj);
+      console.log(result.reverseParams);
+      coordSplice(result.reverseParams!);
+      expect(JSON.stringify(obj.items)).toBe(original);
+    });
+
+    it('正向使用负索引插入后，逆向应该能完全还原', () => {
+      const obj = { items: [1, 2, 3] };
+      const original = JSON.stringify(obj.items);
+
+      const result = coordSplice({ rootObj: obj, editCoord: 'items', start: -1, deleteCount: 0, items: [99] });
+      expect(obj.items).toEqual([1, 2, 99, 3]);
+
+      coordSplice(result.reverseParams!);
+      expect(JSON.stringify(obj.items)).toBe(original);
+    });
+  });
+
+  describe('嵌套路径的逆操作', () => {
+    it('正向操作嵌套数组后，逆向应该能完全还原', () => {
+      const obj = { data: { items: [10, 20, 30] } };
+      const original = JSON.stringify(obj.data.items);
+
+      const result = coordSplice({ rootObj: obj, editCoord: 'data.items', start: 1, deleteCount: 1, items: [25] });
+      expect(result.deletedItems).toEqual([20]);
+      expect(obj.data.items).toEqual([10, 25, 30]);
+
+      coordSplice(result.reverseParams!);
+      expect(JSON.stringify(obj.data.items)).toBe(original);
+    });
+
+    it('正向操作深层嵌套数组后，逆向应该能完全还原', () => {
+      const obj = { a: { b: { c: [1, 2, 3] } } };
+      const original = JSON.stringify(obj.a.b.c);
+
+      const result = coordSplice({ rootObj: obj, editCoord: 'a.b.c', start: 0, deleteCount: 1, items: [] });
+      expect(result.deletedItems).toEqual([1]);
+      expect(obj.a.b.c).toEqual([2, 3]);
+
+      coordSplice(result.reverseParams!);
+      expect(JSON.stringify(obj.a.b.c)).toBe(original);
+    });
+
+    it('正向操作数组中的数组后，逆向应该能完全还原', () => {
+      const obj = { matrix: [[1, 2], [3, 4], [5, 6]] };
+      const original = JSON.stringify(obj.matrix);
+
+      const result = coordSplice({ rootObj: obj, editCoord: 'matrix[1]', start: 0, deleteCount: 1, items: [99] });
+      expect(result.deletedItems).toEqual([3]);
+      expect(obj.matrix).toEqual([[1, 2], [99, 4], [5, 6]]);
+
+      coordSplice(result.reverseParams!);
+      expect(JSON.stringify(obj.matrix)).toBe(original);
+    });
+  });
+
+  describe('复杂场景的逆操作', () => {
+    it('正向替换整个子数组后，逆向应该能完全还原', () => {
+      const obj = { items: [1, 2, 3, 4, 5] };
+      const original = JSON.stringify(obj.items);
+
+      const result = coordSplice({ rootObj: obj, editCoord: 'items', start: 1, deleteCount: 3, items: ['a', 'b', 'c'] });
+      expect(result.deletedItems).toEqual([2, 3, 4]);
+      expect(obj.items).toEqual([1, 'a', 'b', 'c', 5]);
+
+      coordSplice(result.reverseParams!);
+      expect(JSON.stringify(obj.items)).toBe(original);
+    });
+
+    it('正向多次操作后连续逆向应该能完全还原', () => {
+      const obj = { items: [1, 2, 3, 4, 5] };
+      const original = JSON.stringify(obj.items);
+
+      const result1 = coordSplice({ rootObj: obj, editCoord: 'items', start: 1, deleteCount: 2, items: ['a'] });
+      expect(obj.items).toEqual([1, 'a', 4, 5]);
+
+      const result2 = coordSplice({ rootObj: obj, editCoord: 'items', start: 2, deleteCount: 1, items: ['b'] });
+      expect(obj.items).toEqual([1, 'a', 'b', 5]);
+
+      coordSplice(result2.reverseParams!);
+      expect(obj.items).toEqual([1, 'a', 4, 5]);
+
+      coordSplice(result1.reverseParams!);
+      expect(JSON.stringify(obj.items)).toBe(original);
+    });
+
+    it('正向操作边界索引后，逆向应该能完全还原', () => {
+      const obj = { items: [1, 2, 3] };
+      const original = JSON.stringify(obj.items);
+
+      const result = coordSplice({ rootObj: obj, editCoord: 'items', start: 1, deleteCount: 0, items: [99] });
+      expect(obj.items).toEqual([1, 99, 2, 3]);
+
+      coordSplice(result.reverseParams!);
+      expect(JSON.stringify(obj.items)).toBe(original);
+    });
+
+    it('正向删除不存在的索引范围后，逆向应该无变化', () => {
+      const obj = { items: [1, 2] };
+      const original = JSON.stringify(obj.items);
+
+      const result = coordSplice({ rootObj: obj, editCoord: 'items', start: 5, deleteCount: 10, items: [] });
+      expect(result.deletedItems).toEqual([]);
+      expect(result.reverseParams!.deleteCount).toBe(0);
+      expect(obj.items).toEqual([1, 2]);
+
+      coordSplice(result.reverseParams!);
+      expect(JSON.stringify(obj.items)).toBe(original);
+    });
+  });
+
+  describe('对象类型元素的逆操作', () => {
+    it('正向删除对象元素后，逆向应该能完全还原', () => {
+      const obj = { users: [{ name: 'A', age: 20 }, { name: 'B', age: 30 }] };
+      const original = JSON.stringify(obj.users);
+
+      const result = coordSplice({ rootObj: obj, editCoord: 'users', start: 0, deleteCount: 1, items: [] });
+      expect(result.deletedItems).toEqual([{ name: 'A', age: 20 }]);
+      expect(obj.users).toEqual([{ name: 'B', age: 30 }]);
+
+      coordSplice(result.reverseParams!);
+      expect(JSON.stringify(obj.users)).toBe(original);
+    });
+
+    it('正向删除复杂嵌套对象后，逆向应该能完全还原', () => {
+      const obj = { data: { items: [{ a: 1 }, { b: 2 }, { c: 3 }] } };
+      const original = JSON.stringify(obj.data.items);
+
+      const result = coordSplice({ rootObj: obj, editCoord: 'data.items', start: 1, deleteCount: 1, items: [{ x: 99 }] });
+      expect(result.deletedItems).toEqual([{ b: 2 }]);
+      expect(obj.data.items).toEqual([{ a: 1 }, { x: 99 }, { c: 3 }]);
+
+      coordSplice(result.reverseParams!);
+      expect(JSON.stringify(obj.data.items)).toBe(original);
+    });
+  });
+
+
+});
+
 describe('jsonPathSplice', () => {
   describe('基本删除操作', () => {
     it('应该删除数组中指定位置的元素', () => {
