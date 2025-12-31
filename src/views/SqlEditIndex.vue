@@ -58,12 +58,18 @@ const messageListener = (event: MessageEvent) => {
 
 onMounted(() => {
   window.addEventListener('message', messageListener);
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-ignore
-  const vscode = acquireVsCodeApi();
-  vscode.postMessage({
-    msgType: 'sqlEditorOnMount',
-  });
+  try {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    const vscode = acquireVsCodeApi();
+    vscode.postMessage({
+      msgType: 'sqlEditorOnMount',
+    });
+  } catch (error) {
+    console.error('Error acquiring VS Code API:', error);
+  } finally {
+    
+  }
 })
 onBeforeUnmount(() => {
   window.removeEventListener('message', messageListener);

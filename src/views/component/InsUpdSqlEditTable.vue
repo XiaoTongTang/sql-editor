@@ -1,7 +1,7 @@
 <template>
   <div class="about-view">
     <div class="sql-visualization-section">
-      <el-table v-if="tableData.length > 0" :data="tableData" style="width: 100%" border>
+      <el-table class="custom-padding" v-if="tableData.length > 0" :data="tableData" style="width: 100%" border>
         <el-table-column v-for="(column, index) in tableColumns" :key="index" :width="120">
           <template #header>
             <div style="display: flex; flex-direction: column; gap: 2px; width: 100%">
@@ -15,7 +15,6 @@
                 :model-value="tableColumns[index]"
                 @input="handleHeaderInput(index, $event)"
                 placeholder="列名"
-                size="small"
                 style="width: 100%"
               />
             </div>
@@ -25,7 +24,6 @@
               v-if="tableData[$index]?.[index]?.type === 'single_quote_string'"
               :model-value="tableData[$index]?.[index]?.value ?? ''"
               @input="handleTableDataInput($index, index, $event)"
-              size="small"
               placeholder="请输入值"
             />
             <el-input-number
@@ -33,7 +31,6 @@
               :model-value="tableData[$index]?.[index]?.value ?? 0"
               @input="handleTableDataInput($index, index, $event)"
               controls-position="right"
-              size="small"
               style="width: 100%"
               placeholder="请输入值"
             />
@@ -41,7 +38,6 @@
               v-if="tableData[$index]?.[index]?.type === 'null'"
               :model-value="'NULL'"
               disabled 
-              size="small"
             />
             <select
               v-if="fullDataEditButton"
@@ -244,4 +240,12 @@ const handleChangeType = (rowIndex: number, colIndex: number, type: 'number' | '
 .clickableText:hover {
   color: blue;
 }
+
+:deep(.el-table .cell) {
+  padding: 0 !important;
+}
+:deep(.el-table .el-table__cell) {
+  padding: 0 !important;
+}
+
 </style>
