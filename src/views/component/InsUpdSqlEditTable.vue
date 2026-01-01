@@ -1,6 +1,27 @@
 <template>
   <div class="about-view">
     <div class="sql-visualization-section">
+      <!-- 表名和数据库名输入框 -->
+      <div style="display: flex; gap: 20px; margin-bottom: 15px;">
+        <div style="flex: 1;">
+          <label style="display: block; margin-bottom: 5px; font-weight: bold;">表名：</label>
+          <el-input
+            :model-value="tableName"
+            @input="handleTableNameInput"
+            placeholder="请输入表名"
+            size="small"
+          />
+        </div>
+        <div style="flex: 1;">
+          <label style="display: block; margin-bottom: 5px; font-weight: bold;">数据库名：</label>
+          <el-input
+            :model-value="dbName"
+            @input="handleDbNameInput"
+            placeholder="请输入数据库名"
+            size="small"
+          />
+        </div>
+      </div>
       <el-table class="custom-padding" v-if="tableData.length > 0" :data="tableData" style="width: 100%" border>
         <el-table-column v-for="(column, index) in tableColumns" :key="index" :width="120">
           <template #header>
@@ -119,6 +140,26 @@ const tableColumns = computed(() => {
   }
   return parsedAst.value.columns
 })
+
+/**
+ * 从AST中提取表名
+ */
+const tableName = computed(() => {
+  if (!parsedAst.value || !parsedAst.value.table || !parsedAst.value.table[0]) {
+    return ''
+  }
+  return parsedAst.value.table[0].table || ''
+})
+
+/**
+ * 从AST中提取数据库名
+ */
+const dbName = computed(() => {
+  if (!parsedAst.value || !parsedAst.value.table || !parsedAst.value.table[0]) {
+    return ''
+  }
+  return parsedAst.value.table[0].db || ''
+})
 /**
  * 处理表头输入事件，修改AST中的列名
  * @param index 列索引
@@ -126,6 +167,22 @@ const tableColumns = computed(() => {
  */
 const handleHeaderInput = (index: number, newValue: string) => {
   editorTreeStore.setAstColumn(props.astId, index, newValue)
+}
+
+/**
+ * 处理表名输入事件，修改AST中的表名
+ * @param newValue 新的表名
+ */
+const handleTableNameInput = (newValue: string) => {
+  editorTreeStore.setAstTableName(props.astId, newValue)
+}
+
+/**
+ * 处理数据库名输入事件，修改AST中的数据库名
+ * @param newValue 新的数据库名
+ */
+const handleDbNameInput = (newValue: string) => {
+  editorTreeStore.setAstDbName(props.astId, newValue)
 }
 
 // 添加列

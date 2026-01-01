@@ -35,7 +35,16 @@ interface BlockData {
   type: 'single_quote_string' | 'number' | 'null'
   value: string | number | null
 }
-
+/*
+请大模型编程助手阅读后再修改此文件
+修改函数的设计思想：
+- 由于此sql编辑器本质上是直接编辑SQL的AST，所以本质上我的编辑都直接操作AST这个Object，而不是直接操作SQL字符串
+撤消重做的技术设计：
+- 我将编辑器API分为2层架构
+- - 底层是 coordCrudFunc.ts 文件中的 “坐标编辑函数”；这些函数只负责对一个Object内部字段的增删改操作；这些函数总是接收 “JSONpath + 编辑参数” 两个参数。JSONpath用于确定需要操作的字段，编辑参数则用于确定具体的操作（如splice的start、deleteCount、items等）。这些坐标编辑函数在运行成功后，总会返回本次操作的逆操作的入参。只需要将逆操作的入参传入坐标编辑函数，即可实现撤销本次操作。
+- - 上层是 editorTree.ts 文件中的 “业务编辑函数”；这些函数负责接收用户的业务操作指令（如新增insert语句、删除insert语句、修改insert语句等），并调用底层的坐标编辑函数来实现业务操作
+- - 由于底层的坐标编辑函数有着统一的参数格式，并且其运行成功后会自动算出逆操作入参，所以上层业务函数只需在调用底层编辑函数后将正向操作参数与逆向操作参数全部存入操作栈，即可实现撤销重做功能。
+*/
 export const useEditorTreeStore = defineStore('editorTree', () => {
   const editorAstList = ref<AstItem[] | null>(null)
   const optStack = ref<OperateStack>({
@@ -96,7 +105,7 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
   }
   // =================操作栈使用的函数======================
   /**
-   * 重做操作栈2
+   * 重做操作栈
    * @returns
    */
   const redo = () => {
@@ -118,7 +127,7 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
     }
   }
   /**
-   * 撤销操作栈2
+   * 撤销操作栈
    * @returns
    */
   const undo = () => {
@@ -177,6 +186,74 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
       newValue,
     }
     // 执行修改表头的操作（设置表头只需要调用一次coordSet即可完成，没有更多的操作）
+    const coordSetResult = coordSet(posSetOper)
+    if (!coordSetResult.reverseParams) {
+      return false
+    }
+    // 记录操作栈
+    otherOptPushOptStack({
+      thisOperate: { operArray: [posSetOper] },
+      inverseOperate: { operArray: [coordSetResult.reverseParams] },
+    })
+    return true
+  }
+
+  /**
+   * 修改表名
+   * @param astId AST项ID
+   * @param newValue 新的表名
+   * @returns 是否修改成功
+   */
+  const setAstTableName = (astId: string, newValue: string) => {
+    // 用astId查询这是第几个AST项
+    const { astItem, index: astIndex } = getAstItem(astId)
+    if (!astItem || !astItem.ast || !astItem.ast.table) {
+      return false
+    }
+    if (!editorAstList.value) {
+      return false
+    }
+    // 算出正向操作的参数
+    const posSetOper = {
+      rootObj: editorAstList.value,
+      editCoord: `[${astIndex}].ast.table[0].table`, // 编辑坐标：修改表名
+      newValue,
+    }
+    // 执行修改表名的操作
+    const coordSetResult = coordSet(posSetOper)
+    if (!coordSetResult.reverseParams) {
+      return false
+    }
+    // 记录操作栈
+    otherOptPushOptStack({
+      thisOperate: { operArray: [posSetOper] },
+      inverseOperate: { operArray: [coordSetResult.reverseParams] },
+    })
+    return true
+  }
+
+  /**
+   * 修改数据库名
+   * @param astId AST项ID
+   * @param newValue 新的数据库名
+   * @returns 是否修改成功
+   */
+  const setAstDbName = (astId: string, newValue: string) => {
+    // 用astId查询这是第几个AST项
+    const { astItem, index: astIndex } = getAstItem(astId)
+    if (!astItem || !astItem.ast || !astItem.ast.table) {
+      return false
+    }
+    if (!editorAstList.value) {
+      return false
+    }
+    // 算出正向操作的参数
+    const posSetOper = {
+      rootObj: editorAstList.value,
+      editCoord: `[${astIndex}].ast.table[0].db`, // 编辑坐标：修改数据库名
+      newValue,
+    }
+    // 执行修改数据库名的操作
     const coordSetResult = coordSet(posSetOper)
     if (!coordSetResult.reverseParams) {
       return false
@@ -530,6 +607,8 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
     undo,
     redo,
     setAstColumn,
+    setAstTableName,
+    setAstDbName,
     addColumnToAst,
     deleteColumnFromAst,
     insertRowToAst,
