@@ -2,23 +2,25 @@
   <div class="about-view">
     <div class="sql-visualization-section">
       <!-- 表名和数据库名输入框 -->
-      <div style="display: flex; gap: 20px; margin-bottom: 15px;">
-        <div style="flex: 1;">
-          <label style="display: block; margin-bottom: 5px; font-weight: bold;">表名：</label>
+      <div style="display: flex; gap: 20px; margin-bottom: 8px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <label style="white-space: nowrap;">表名：</label>
           <el-input
             :model-value="tableName"
             @input="handleTableNameInput"
             placeholder="请输入表名"
             size="small"
+            style="width: 180px;"
           />
         </div>
-        <div style="flex: 1;">
-          <label style="display: block; margin-bottom: 5px; font-weight: bold;">数据库名：</label>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <label style="white-space: nowrap;">数据库名：</label>
           <el-input
             :model-value="dbName"
             @input="handleDbNameInput"
             placeholder="请输入数据库名"
             size="small"
+            style="width: 180px;"
           />
         </div>
       </div>
