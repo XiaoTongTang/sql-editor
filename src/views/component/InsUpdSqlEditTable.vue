@@ -2,25 +2,29 @@
   <div class="about-view">
     <div class="sql-visualization-section">
       <!-- 表名和数据库名输入框 -->
-      <div style="display: flex; gap: 20px; margin-bottom: 8px;">
+      <div style="display: flex; gap: 10px; margin-bottom: 8px;">
         <div style="display: flex; align-items: center; gap: 8px;">
-          <label style="white-space: nowrap;">表名：</label>
+          <label style="white-space: nowrap;">SQL类型:</label>
+          {{ sqlType }}
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <label style="white-space: nowrap;">表名:</label>
           <el-input
             :model-value="tableName"
             @input="handleTableNameInput"
             placeholder="请输入表名"
             size="small"
-            style="width: 180px;"
+            style="width: 140px;"
           />
         </div>
         <div style="display: flex; align-items: center; gap: 8px;">
-          <label style="white-space: nowrap;">数据库名：</label>
+          <label style="white-space: nowrap;">数据库名:</label>
           <el-input
             :model-value="dbName"
             @input="handleDbNameInput"
             placeholder="请输入数据库名"
             size="small"
-            style="width: 180px;"
+            style="width: 140px;"
           />
         </div>
       </div>
@@ -161,6 +165,17 @@ const dbName = computed(() => {
     return ''
   }
   return parsedAst.value.table[0].db || ''
+})
+
+/**
+ * 从AST中提取数据库名
+ */
+const sqlType = computed(() => {
+  if (!parsedAst.value || !parsedAst.value.type) {
+    return ''
+  }
+  // 转换为大写
+  return parsedAst.value.type.toUpperCase() || ''
 })
 /**
  * 处理表头输入事件，修改AST中的列名

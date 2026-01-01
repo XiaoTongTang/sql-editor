@@ -79,6 +79,8 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
           type: item.type,
           ast: item as Insert_Replace,
         })) as AstItem[]
+      // 成功解析并替换editorAstList后，清空操作栈
+      clearOperationStack()
     } catch (error) {
       console.error('SQL解析错误:', error)
       editorAstList.value = null
@@ -153,7 +155,7 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
    * @param optItem
    */
   const otherOptPushOptStack = (optItem: OptStackItem) => {
-    // 将当前pointer以上的操作出栈（因为产生了一次新的操作后，指针以上的操作就全部会变得“无法重做”，因此需要全部出栈）
+    // 将当前pointer以上的操作出栈（因为产生了一次新的操作后，指针以上的操作就全部会变得"无法重做"，因此需要全部出栈）
     optStack.value.stack.splice(optStack.value.pointer + 1)
     // 将本次操作入栈
     optStack.value.stack.push(optItem)
@@ -163,6 +165,14 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
     }
     // 将指针指向栈顶
     optStack.value.pointer = optStack.value.stack.length - 1
+  }
+
+  /**
+   * 清空操作栈
+   */
+  const clearOperationStack = () => {
+    optStack.value.stack.splice(0)
+    optStack.value.pointer = -1
   }
   // =================编辑单个AST使用的函数====================
   /**
@@ -606,6 +616,7 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
     astToSql,
     undo,
     redo,
+    clearOperationStack,
     setAstColumn,
     setAstTableName,
     setAstDbName,
