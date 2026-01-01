@@ -28,7 +28,11 @@
           />
         </div>
       </div>
-      <el-table class="custom-padding" v-if="tableData.length > 0" :data="tableData" style="width: 100%" border>
+      <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+        <el-button size="small" @click="scrollTable('left')">← 向左滚动</el-button>
+        <el-button size="small" @click="scrollTable('right')">向右滚动 →</el-button>
+      </div>
+      <el-table class="custom-padding" v-if="tableData.length > 0" :data="tableData" style="width: 100%" border ref="tableRef">
         <el-table-column v-for="(column, index) in tableColumns" :key="index" :width="120">
           <template #header>
             <div style="display: flex; flex-direction: column; gap: 2px; width: 100%">
@@ -115,6 +119,8 @@ import { type Insert_Replace } from 'node-sql-parser'
 import { ElInput, ElButton, ElTable, ElTableColumn, ElEmpty, ElSwitch, ElInputNumber } from 'element-plus'
 import { useEditorTreeStore } from '@/stores/editorTree'
 
+const tableRef = ref()
+
 const editorTreeStore = useEditorTreeStore()
 
 const props = defineProps({
@@ -146,6 +152,41 @@ const tableColumns = computed(() => {
   }
   return parsedAst.value.columns
 })
+
+// 滚动控制函数
+const scrollTable = (direction: 'left' | 'right' | 'up' | 'down') => {
+  if (!tableRef.value) return
+  const scrollBarWrap = tableRef.value.$el.querySelector('.el-scrollbar__wrap')
+  if (!scrollBarWrap) return
+  // 获取当前的滚动坐标
+  const currentLeft = scrollBarWrap.scrollLeft
+  const currentTop = scrollBarWrap.scrollTop
+  // 获取一个表格元素，用于计算滚动距离
+  const tableBlockElement = tableRef.value.$el.querySelector('.el-table__body tr td')
+  // 水平滚动距离
+  const horizontalScrollDistance = tableBlockElement ? tableBlockElement.offsetWidth : 100
+  // 垂直滚动距离
+  const verticalScrollDistance = tableBlockElement ? tableBlockElement.offsetHeight : 100
+  
+  // 计算目标坐标
+  let targetLeft = currentLeft
+  let targetTop = currentTop
+  
+  if (direction === 'left') {
+    targetLeft = Math.max(0, currentLeft - horizontalScrollDistance)
+  } else if (direction === 'right') {
+    targetLeft = currentLeft + horizontalScrollDistance
+  } else if (direction === 'up') {
+    targetTop = Math.max(0, currentTop - verticalScrollDistance)
+  } else if (direction === 'down') {
+    targetTop = currentTop + verticalScrollDistance
+  }
+  tableRef.value.scrollTo({
+    left: targetLeft,
+    top: targetTop,
+    behavior: 'smooth'
+  })
+}
 
 /**
  * 从AST中提取表名
