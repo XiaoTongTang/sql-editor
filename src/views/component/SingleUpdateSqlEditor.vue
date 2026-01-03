@@ -15,12 +15,12 @@
       >
         <el-table-column
           v-for="(column, index) in tableColumns"
-          :key="column"
+          :key="index"
           :width="120"
         >
           <template #header>
             <el-input
-              :model-value="column"
+              :model-value="tableColumns[index]"
               @input="handleHeaderInput(index, $event)"
               placeholder="列名"
               size="small"
@@ -28,7 +28,7 @@
           </template>
           <template #default="{ row }">
             <el-input
-              :model-value="row[column].value"
+              :model-value="row[tableColumns[index] as string]"
               @input="handleCellInput(index, $event)"
               size="small"
             />
@@ -110,7 +110,7 @@ const tableColumns = computed(() => {
     return []
   }
 
-  return parsedAst.value.set.map((item) => item.column).filter(Boolean)
+  return parsedAst.value.set.map((item) => item.column)
 })
 
 /**
@@ -135,22 +135,21 @@ const tableData = computed(() => {
 })
 
 /**
- * 处理表头输入事件，修改AST中的列名
+ * 处理表头失焦事件，修改AST中的列名
  * @param index 列索引
  * @param newValue 新的列名
  */
 const handleHeaderInput = (index: number, newValue: string) => {
-  // 这里需要实现修改AST中列名的逻辑
   console.log('修改列名:', index, newValue)
+  editorTreeStore.updSqlSetAstColumn(props.astId, index, newValue)
 }
 
 /**
- * 处理单元格输入事件，修改AST中的字段值
+ * 处理单元格失焦事件，修改AST中的字段值
  * @param columnIndex 列索引
  * @param newValue 新的字段值
  */
 const handleCellInput = (columnIndex: number, newValue: string) => {
-  // 这里需要实现修改AST中字段值的逻辑
   console.log('修改字段值:', columnIndex, newValue)
 }
 

@@ -9,8 +9,8 @@
       <el-button type="primary" @click="editorTreeStore.redo">重做</el-button>
     </div>
     <template v-for="(item, index) in editorTreeStore.editorAstList" :key="item.id">
-      <InsUpdSqlEditTable v-if="item.type == 'insert'" :astIndex="index" :astId="item.id" v-model="item.ast" />
-      <SingleUpdateSqlEditor v-if="item.type == 'update'" :astIndex="index" :astId="item.id" v-model="item.ast" />
+      <InsUpdSqlEditTable v-if="item.type == 'insert'" :astIndex="index" :astId="item.id" v-model="item.ast as Insert_Replace" />
+      <SingleUpdateSqlEditor v-if="item.type == 'update'" :astIndex="index" :astId="item.id" v-model="item.ast as UpdateAst" />
     </template>
 
     <div class="sql-output-section">
@@ -24,6 +24,7 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { ElInput, ElButton, ElMessage } from 'element-plus'
 import InsUpdSqlEditTable from '@/views/component/InsUpdSqlEditTable.vue'
+import { type Insert_Replace, type Update as UpdateAst } from 'node-sql-parser'
 import SingleUpdateSqlEditor from '@/views/component/SingleUpdateSqlEditor.vue'
 import { useEditorTreeStore } from '@/stores/editorTree';
 

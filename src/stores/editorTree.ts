@@ -209,6 +209,45 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
   }
 
   /**
+   * 处理update语句表头输入事件，修改AST中的列名
+   * @param astId AST项ID
+   * @param index 列索引
+   * @param newValue 新的列名
+   * @returns 是否修改成功
+   */
+  const updSqlSetAstColumn = (astId: string, index: number, newValue: string) => {
+    // 用astId查询这是第几个AST项
+    const { astItem, index: astIndex } = getAstItem(astId)
+    if (!astItem || !astItem.ast || !isUpdateAst(astItem.ast) || !astItem.ast.set || !Array.isArray(astItem.ast.set)) {
+      return false
+    }
+    if (!editorAstList.value) {
+      return false
+    }
+    // 检查索引是否越界
+    if (index < 0 || index >= astItem.ast.set.length) {
+      return false
+    }
+    // 算出正向操作的参数
+    const posSetOper = {
+      rootObj: editorAstList.value,
+      editCoord: `[${astIndex}].ast.set[${index}].column`, // 编辑坐标：修改update语句的set中的列名
+      newValue,
+    }
+    // 执行修改列名的操作（设置列名只需要调用一次coordSet即可完成，没有更多的操作）
+    const coordSetResult = coordSet(posSetOper)
+    if (!coordSetResult.reverseParams) {
+      return false
+    }
+    // 记录操作栈
+    otherOptPushOptStack({
+      thisOperate: { operArray: [posSetOper] },
+      inverseOperate: { operArray: [coordSetResult.reverseParams] },
+    })
+    return true
+  }
+
+  /**
    * 修改表名
    * @param astId AST项ID
    * @param newValue 新的表名
@@ -618,6 +657,7 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
     redo,
     clearOperationStack,
     setAstColumn,
+    updSqlSetAstColumn,
     setAstTableName,
     setAstDbName,
     addColumnToAst,
@@ -631,9 +671,9 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
 
 // 类型守卫：检查是否是UpdateAst类型
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-// const isUpdateAst = (ast: any): ast is UpdateAst => {
-//   return ast && typeof ast === 'object' && ast.type === 'update'
-// }
+const isUpdateAst = (ast: any): ast is UpdateAst => {
+  return ast && typeof ast === 'object' && ast.type === 'update'
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const isInsertAst = (ast: any): ast is Insert_Replace => {
