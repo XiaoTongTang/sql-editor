@@ -248,6 +248,72 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
   }
 
   /**
+   * 处理update语句字段值输入事件，修改AST中的字段值
+   * @param astId AST项ID
+   * @param columnIndex 列索引
+   * @param newValue 新的字段值
+   * @returns 是否修改成功
+   */
+  const updSqlModifyAstValue = (astId: string, columnIndex: number, newValue: string | number | null | undefined) => {
+    // 用astId查询这是第几个AST项
+    const { astItem, index: astIndex } = getAstItem(astId)
+    if (!astItem || !astItem.ast || !isUpdateAst(astItem.ast) || !astItem.ast.set || !Array.isArray(astItem.ast.set)) {
+      return false
+    }
+    if (!editorAstList.value) {
+      return false
+    }
+    // 检查索引是否越界
+    if (columnIndex < 0 || columnIndex >= astItem.ast.set.length) {
+      return false
+    }
+    
+    // 获取当前字段的类型和值
+    const currentSetItem = astItem.ast.set[columnIndex]
+    if (!currentSetItem || !currentSetItem.value) {
+      return false
+    }
+    
+    let processedValue = newValue
+    const valueType = currentSetItem.value.type
+    
+    // 根据当前类型处理值
+    if (valueType === 'single_quote_string') {
+      processedValue = newValue
+    } else if (valueType === 'number') {
+      // 尝试转换为数字，如果失败则保持原样
+      const numValue = Number(newValue)
+      if (!isNaN(numValue)) {
+        processedValue = numValue
+      }
+    } else {
+      console.log('不支持的类型:', valueType)
+      return false
+    }
+    
+    // 算出正向操作的参数
+    const posSetOper = {
+      rootObj: editorAstList.value,
+      editCoord: `[${astIndex}].ast.set[${columnIndex}].value`, // 编辑坐标：修改update语句的set中的值
+      newValue: {
+        type: valueType,
+        value: processedValue
+      },
+    }
+    // 执行修改字段值的操作
+    const coordSetResult = coordSet(posSetOper)
+    if (!coordSetResult.reverseParams) {
+      return false
+    }
+    // 记录操作栈
+    otherOptPushOptStack({
+      thisOperate: { operArray: [posSetOper] },
+      inverseOperate: { operArray: [coordSetResult.reverseParams] },
+    })
+    return true
+  }
+
+  /**
    * 修改表名
    * @param astId AST项ID
    * @param newValue 新的表名
@@ -658,6 +724,7 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
     clearOperationStack,
     setAstColumn,
     updSqlSetAstColumn,
+    updSqlModifyAstValue,
     setAstTableName,
     setAstDbName,
     addColumnToAst,

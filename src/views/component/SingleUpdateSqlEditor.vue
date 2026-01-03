@@ -23,14 +23,27 @@
               :model-value="tableColumns[index]"
               @input="handleHeaderInput(index, $event)"
               placeholder="列名"
-              size="small"
             />
           </template>
           <template #default="{ row }">
             <el-input
-              :model-value="row[tableColumns[index] as string]"
+              v-if="row[tableColumns[index] as string].type === 'single_quote_string'"
+              :model-value="row[tableColumns[index] as string].value"
               @input="handleCellInput(index, $event)"
-              size="small"
+              placeholder="请输入值"
+            />
+            <el-input-number
+              v-if="row[tableColumns[index] as string].type === 'number'"
+              :model-value="row[tableColumns[index] as string].value"
+              @input="handleCellInput(index, $event as number)"
+              controls-position="right"
+              style="width: 100%"
+              placeholder="请输入值"
+            />
+            <el-input
+              v-if="row[tableColumns[index] as string].type === 'null'"
+              :model-value="'NULL'"
+              disabled 
             />
           </template>
         </el-table-column>
@@ -49,7 +62,6 @@ import {
   ElTable,
   ElTableColumn,
   ElEmpty,
-  ElSwitch,
   ElInputNumber,
 } from 'element-plus'
 import { useEditorTreeStore } from '@/stores/editorTree'
@@ -135,7 +147,7 @@ const tableData = computed(() => {
 })
 
 /**
- * 处理表头失焦事件，修改AST中的列名
+ * 处理表头输入事件，修改AST中的列名
  * @param index 列索引
  * @param newValue 新的列名
  */
@@ -145,12 +157,13 @@ const handleHeaderInput = (index: number, newValue: string) => {
 }
 
 /**
- * 处理单元格失焦事件，修改AST中的字段值
+ * 处理单元格输入事件，修改AST中的字段值
  * @param columnIndex 列索引
  * @param newValue 新的字段值
  */
-const handleCellInput = (columnIndex: number, newValue: string) => {
+const handleCellInput = (columnIndex: number, newValue: string | number) => {
   console.log('修改字段值:', columnIndex, newValue)
+  editorTreeStore.updSqlModifyAstValue(props.astId, columnIndex, newValue)
 }
 
 // 滚动控制函数
