@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
-import NodeSQLParser, { type Insert_Replace, type InsertReplaceValue } from 'node-sql-parser'
+import NodeSQLParser, { type Insert_Replace, type InsertReplaceValue, type Update as UpdateAst } from 'node-sql-parser'
 import { generate as shortUuidGenerate } from 'short-uuid'
 import {
   coordSet,
@@ -14,7 +14,7 @@ import {
 export interface AstItem {
   id: string
   type: string
-  ast: Insert_Replace
+  ast: Insert_Replace | UpdateAst
 }
 // 操作栈中的元素
 export interface OptStackItem {
@@ -73,7 +73,7 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
       // 确保 astList 是数组后再过滤
       const list = Array.isArray(astList) ? astList : [astList]
       editorAstList.value = list
-        .filter((item) => item.type === 'insert')
+        .filter((item) => item.type === 'insert' || item.type === 'update')
         .map((item) => ({
           id: shortUuidGenerate(),
           type: item.type,
@@ -183,7 +183,7 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
   const setAstColumn = (astId: string, index: number, newValue: string) => {
     // 用astId查询这是第几个AST项
     const { astItem, index: astIndex } = getAstItem(astId)
-    if (!astItem || !astItem.ast || !astItem.ast.columns || !Array.isArray(astItem.ast.columns)) {
+    if (!astItem || !astItem.ast || !isInsertAst(astItem.ast) || !astItem.ast.columns || !Array.isArray(astItem.ast.columns)) {
       return false
     }
     if (!editorAstList.value) {
@@ -288,7 +288,7 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
       return false
     }
     const { astItem, index: astIndex } = getAstItem(astId)
-    if (!astItem || !astItem.ast) {
+    if (!astItem || !astItem.ast || !isInsertAst(astItem.ast)) {
       return false
     }
     // STEP0 创建一个空的栈项，用于记录操作栈
@@ -355,7 +355,7 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
       return false
     }
     const { astItem, index: astIndex } = getAstItem(astId)
-    if (!astItem || !astItem.ast || !astItem.ast.columns || !Array.isArray(astItem.ast.columns)) {
+    if (!astItem || !astItem.ast || !isInsertAst(astItem.ast) || !astItem.ast.columns || !Array.isArray(astItem.ast.columns)) {
       return false
     }
     if (astItem.ast.columns.length <= 1) {
@@ -418,7 +418,7 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
   // 删除行
   const deleteRowFromAst = (astId: string, rowIndex: number) => {
     const { astItem, index: astIndex } = getAstItem(astId)
-    if (!astItem || !astItem.ast || !astItem.ast.values || astItem.ast.values.type !== 'values') {
+    if (!astItem || !astItem.ast || !isInsertAst(astItem.ast) || !astItem.ast.values || astItem.ast.values.type !== 'values') {
       return
     }
     // 检查是否整个AST只剩一行
@@ -454,7 +454,7 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
   // 插入行
   const insertRowToAst = (astId: string, rowIndex: number) => {
     const { astItem, index: astIndex } = getAstItem(astId)
-    if (!astItem || !astItem.ast || !astItem.ast.values || astItem.ast.values.type !== 'values') {
+    if (!astItem || !astItem.ast || !isInsertAst(astItem.ast) || !astItem.ast.values || astItem.ast.values.type !== 'values') {
       return
     }
     // STEP0 创建一个空的栈项，用于记录操作栈
@@ -503,7 +503,7 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
    */
   const modifyAstRowData = (astId: string, rowIndex: number, colIndex: number, value: string | number | null | undefined) => {
     const { astItem, index: astIndex } = getAstItem(astId)
-    if (!astItem || !astItem.ast || !astItem.ast.values || astItem.ast.values.type !== 'values') {
+    if (!astItem || !astItem.ast || !isInsertAst(astItem.ast) || !astItem.ast.values || astItem.ast.values.type !== 'values') {
       console.log('AST树不存在')
       return
     }
@@ -560,7 +560,7 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
       thisOperate: { operArray: [] },
       inverseOperate: { operArray: [] },
     }
-    if (!astItem || !astItem.ast || !astItem.ast.values || astItem.ast.values.type !== 'values') {
+    if (!astItem || !astItem.ast || !isInsertAst(astItem.ast) || !astItem.ast.values || astItem.ast.values.type !== 'values') {
       console.log('AST树不存在:', astId)
       return
     }
@@ -628,3 +628,14 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
     handleChangeType
   }
 })
+
+// 类型守卫：检查是否是UpdateAst类型
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// const isUpdateAst = (ast: any): ast is UpdateAst => {
+//   return ast && typeof ast === 'object' && ast.type === 'update'
+// }
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const isInsertAst = (ast: any): ast is Insert_Replace => {
+  return ast && typeof ast === 'object' && ast.type === 'insert'
+}

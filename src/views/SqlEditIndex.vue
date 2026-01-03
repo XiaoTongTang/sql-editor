@@ -8,7 +8,10 @@
       <el-button type="primary" @click="editorTreeStore.undo">撤销</el-button>
       <el-button type="primary" @click="editorTreeStore.redo">重做</el-button>
     </div>
-    <InsUpdSqlEditTable v-for="(item, index) in editorTreeStore.editorAstList" :key="item.id" :astIndex="index" :astId="item.id" v-model="item.ast" />
+    <template v-for="(item, index) in editorTreeStore.editorAstList" :key="item.id">
+      <InsUpdSqlEditTable v-if="item.type == 'insert'" :astIndex="index" :astId="item.id" v-model="item.ast" />
+      <SingleUpdateSqlEditor v-if="item.type == 'update'" :astIndex="index" :astId="item.id" v-model="item.ast" />
+    </template>
 
     <div class="sql-output-section">
       <el-button type="success" @click="astToSql">输出修改后sql</el-button>
@@ -21,6 +24,7 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { ElInput, ElButton, ElMessage } from 'element-plus'
 import InsUpdSqlEditTable from '@/views/component/InsUpdSqlEditTable.vue'
+import SingleUpdateSqlEditor from '@/views/component/SingleUpdateSqlEditor.vue'
 import { useEditorTreeStore } from '@/stores/editorTree';
 
 const sqlContent = ref('')
