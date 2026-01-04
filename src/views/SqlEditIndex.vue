@@ -5,10 +5,11 @@
       <el-button type="primary" @click="sqlToAst">提交可视化编辑</el-button>
     </div>
     <div class="sql-input-section">
-      <el-button type="primary" @click="editorTreeStore.undo">撤销</el-button>
-      <el-button type="primary" @click="editorTreeStore.redo">重做</el-button>
-      备注:对于update语句的where条件输入框,是失去输入框焦点时才视为更新动作
+      <el-button type="primary" @click="editorTreeStore.undo">撤销 (Ctrl+Z)</el-button>
+      <el-button type="primary" @click="editorTreeStore.redo">重做 (Ctrl+Shift+Z)</el-button>
     </div>
+    <el-tag type="info">备注: update语句的where条件输入框是失去输入框焦点时才实际提交变更</el-tag>
+    <el-tag type="success">快捷键: Ctrl+Z 撤销, Ctrl+Shift+Z 重做</el-tag>
     <template v-for="(item, index) in editorTreeStore.editorAstList" :key="item.id">
       <InsUpdSqlEditTable v-if="item.type == 'insert'" :astIndex="index" :astId="item.id" v-model="item.ast as Insert_Replace" />
       <SingleUpdateSqlEditor v-if="item.type == 'update'" :astIndex="index" :astId="item.id" v-model="item.ast as UpdateAst" />
@@ -65,6 +66,8 @@ const messageListener = (event: MessageEvent) => {
 
 onMounted(() => {
   window.addEventListener('message', messageListener);
+  // 注册键盘快捷键监听器
+  document.addEventListener('keydown', handleKeyboardShortcuts)
   try {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
@@ -80,6 +83,8 @@ onMounted(() => {
 })
 onBeforeUnmount(() => {
   window.removeEventListener('message', messageListener);
+  // 注销键盘快捷键监听器
+  document.removeEventListener('keydown', handleKeyboardShortcuts)
 })
 
 /**
@@ -102,6 +107,32 @@ const sendSqlToEditor = () => {
     }
   } else {
     ElMessage.error('请先输出修改后SQL语句')
+  }
+}
+
+/**
+ * 处理键盘快捷键事件
+ * @param event 键盘事件
+ */
+const handleKeyboardShortcuts = (event: KeyboardEvent) => {
+  // 检查是否按下了Ctrl键
+  if (!event.ctrlKey) {
+    return
+  }
+
+  // 检查是否按下了Z键
+  if (event.key === 'z' || event.key === 'Z') {
+    event.preventDefault() // 阻止浏览器默认行为
+    event.stopPropagation() // 阻止事件传播
+
+    // Ctrl+Z -> 撤销
+    if (event.shiftKey) {
+      // Ctrl+Shift+Z -> 重做
+      editorTreeStore.redo()
+    } else {
+      // Ctrl+Z -> 撤销
+      editorTreeStore.undo()
+    }
   }
 }
 </script>

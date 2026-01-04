@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { RouterLink, RouterView } from 'vue-router'
+// import { RouterLink, RouterView } from 'vue-router'
+import SqlEditIndex from '@/views/SqlEditIndex.vue'
 </script>
 
 <template>
-  <header>
+  <!-- <header>
     <div class="wrapper">
       <nav>
         <RouterLink to="/about">sql编辑视图</RouterLink>
@@ -13,7 +14,8 @@ import { RouterLink, RouterView } from 'vue-router'
     </div>
   </header>
 
-  <RouterView />
+  <RouterView /> -->
+  <SqlEditIndex />
 </template>
 
 <style scoped>
