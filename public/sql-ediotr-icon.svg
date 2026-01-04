@@ -1,0 +1,10 @@
+<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
+
+ <g>
+  <title>Layer 1</title>
+  <rect stroke="#000" id="svg_4" height="113.99957" width="109.99959" y="-7.46646" x="-6.66646" stroke-width="0" fill="#007fff"/>
+  <text transform="matrix(2.65547 0 0 3.11707 -271.496 -473.157)" stroke="#000" font-weight="bold" xml:space="preserve" text-anchor="start" font-family="'Arimo'" font-size="24" id="svg_1" y="216.00593" x="146.67723" stroke-width="0" fill="#000000">SE</text>
+  <text font-weight="bold" transform="matrix(1.52292 0 0 1.57352 -19.2387 -11.8273)" stroke="#000" xml:space="preserve" text-anchor="start" font-family="'Arimo'" font-size="24" id="svg_2" y="35.86019" x="21.4616" stroke-width="0" fill="#ffffff">SQL</text>
+  <text font-weight="bold" transform="matrix(1.12105 0 0 1.42515 4.1023 -18.1556)" stroke="#000" xml:space="preserve" text-anchor="start" font-family="'Arimo'" font-size="24" id="svg_3" y="72.00488" x="8.47143" stroke-width="0" fill="#ffffff">Editor</text>
+ </g>
+</svg>
