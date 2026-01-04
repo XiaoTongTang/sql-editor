@@ -115,7 +115,7 @@ const complexData = ref({
 // 修改对象数组中的一个元素
 const updateArrayItem = () => {
   // 修改第三个元素的值
-  complexData.value.items[2].value = `修改后的值`
+  // complexData.value.items[2].value = `修改后的值`
   console.log('已修改对象数组中的元素')
 }
 
