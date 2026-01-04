@@ -36,7 +36,11 @@ const generatedSql = ref('')
 const editorTreeStore = useEditorTreeStore()
 
 const sqlToAst = () => {
-  editorTreeStore.sqlToAst(sqlContent.value)
+  try {
+    editorTreeStore.sqlToAst(sqlContent.value)
+  } catch (error) {
+    ElMessage.error(String(error))
+  }
 }
 // 生成修改后的SQL
 const astToSql = () => {

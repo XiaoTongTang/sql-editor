@@ -85,6 +85,7 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
     } catch (error) {
       console.error('SQL解析错误:', error)
       editorAstList.value = null
+      throw new Error('SQL解析错误')
     }
   }
 
