@@ -57,13 +57,23 @@
         </el-table-column>
       </el-table>
       <el-empty v-else description="暂无数据"></el-empty>
+      <div style="display: flex; gap: 10px; margin-bottom: 8px; margin-top: 10px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <label style="white-space: nowrap;">WHERE条件:</label>
+          <el-input
+            v-model="whereCondInputText"
+            placeholder="请输入WHERE条件"
+            style="width: 200px;"
+          />
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { type Update as UpdateAst } from 'node-sql-parser'
+import { computed, onMounted, ref, watch } from 'vue'
+import NodeSQLParser, { type Update as UpdateAst } from 'node-sql-parser'
 import {
   ElInput,
   ElButton,
@@ -73,6 +83,7 @@ import {
   ElInputNumber,
 } from 'element-plus'
 import { useEditorTreeStore } from '@/stores/editorTree'
+import { getSandboxAst } from '@/utils/plainTextEditUtils'
 
 const tableRef = ref()
 
@@ -95,6 +106,58 @@ interface BlockData {
   type: 'single_quote_string' | 'number' | 'null'
   value: string | number | null
 }
+
+const parser = new NodeSQLParser.Parser()
+
+/*
+Where条件文本框这样子截取出来的东西绝对不能用v-model直接绑定，因为那样会导致输入框内容被锁死，根本无法编辑。（因为where条件编辑方式和直接编辑字符串不同，where条件总是要经过编译器才能存入AST中，而直接的简单v-bind只能适应最普通的直接字符编辑）
+将AST中where条件子树与 “输入框” 解耦，避免输入框绑死的整体技术方案为：
+Step1输入框绑定一个组件内自己的变量whereCondInputText
+Step2增加一个watch，监听editorTreeStore中AST的where子树，一旦where子树发生变化，则更新whereCondInputText
+Step3为输入框增加onBlur事件，onBlur时写入AST中的where子树
+*/
+const whereCondInputText = ref('')
+/*
+从AST中提取where条件字符串的工具函数
+背景：where条件语法非常复杂，不可能100%实现可视化编辑。所以需要直接编辑where条件的plain text
+实现手段：
+  将AST转化为SQL文本方案：
+    STEP1 将语法树的where条件子树切割出来
+    STEP2 将where子树拼接到“沙盒AST”
+    STEP3 将“沙盒AST”解析为SQL
+    STEP4 截取 WHERE 字段和 LIMIT字段中间部分的字符串，作为SQL文本展示在文本框中
+ */
+const getWhereCondInputTextFromAst = () => {
+  if (!parsedAst.value || !parsedAst.value.where) {
+    return ''
+  }
+  // 沙盒AST
+  const sandboxAst = getSandboxAst()
+  // STEP1 将语法树的where条件子树切割出来
+  const whereAST = parsedAst.value.where
+  // STEP2 将where子树拼接到“沙盒AST”
+  sandboxAst.where = {...whereAST}
+  // STEP3 将“沙盒AST”解析为SQL
+  const sql = parser.sqlify(sandboxAst)
+  // STEP4 截取 WHERE 字段后方所有字符串，作为SQL文本展示在文本框中
+  const whereIndex = sql.indexOf('WHERE')
+  whereCondInputText.value = sql.substring(whereIndex + 5).trim()
+}
+
+watch(
+  // 监听AST中，where子树的变化
+  () => (parsedAst.value as UpdateAst).where,
+  () => {
+    // 一旦where子树发生变化，则更新whereCondInputText
+    getWhereCondInputTextFromAst()
+  }
+)
+
+onMounted(() => {
+  // 组件挂载时，初始化whereCondInputText
+  getWhereCondInputTextFromAst()
+})
+
 
 /**
  * 解析update语句的字段值
