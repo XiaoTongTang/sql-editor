@@ -175,6 +175,7 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
     optStack.value.pointer = -1
   }
   // =================编辑单个AST使用的函数====================
+  // ======================insert语句函数=====================
   /**
    * 处理表头输入事件，修改AST中的列名
    * @param index 列索引
@@ -713,6 +714,116 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
     })
     return true
   }
+
+  /**
+   * 为update语句添加新字段
+   * @param astId AST项ID
+   * @param index 要添加的字段索引位置（注意：是要添加到该索引的后面）
+   * @returns 是否添加成功
+   */
+  const updSqlAddField = (astId: string, index: number) => {
+    // 用astId查询这是第几个AST项
+    if (!editorAstList.value) {
+      return false
+    }
+    const { astItem, index: astIndex } = getAstItem(astId)
+    if (!astItem || !astItem.ast || !isUpdateAst(astItem.ast) || !astItem.ast.set || !Array.isArray(astItem.ast.set)) {
+      return false
+    }
+    
+    // STEP0 创建一个空的栈项，用于记录操作栈
+    const optStackItem: OptStackItem = {
+      thisOperate: { operArray: [] },
+      inverseOperate: { operArray: [] },
+    }
+
+    // STEP1 创建新的字段对象（必须是single_quote_string类型）
+    const newField = {
+      column: '新字段',
+      value: {
+        type: 'single_quote_string',
+        value: ''
+      }
+    }
+
+    const addFieldOp = {
+      rootObj: editorAstList.value,
+      editCoord: `[${astIndex}].ast.set`,
+      start: index + 1,
+      deleteCount: 0,
+      items: [newField], // 插入的新字段
+    }
+    
+    // STEP2 调用splice函数添加新字段，并计算出逆操作的参数
+    const addFieldResult = coordSplice(addFieldOp)
+    if (!addFieldResult.reverseParams) {
+      return false
+    }
+    
+    // STEP3 向操作栈item中记录crud操作
+    optStackItem.thisOperate.operArray.push(addFieldOp) // 向 "正向操作列表" 中，添加 "添加字段" 操作
+    optStackItem.inverseOperate.operArray.unshift(addFieldResult.reverseParams) // 向 "逆操作列表" 中，添加 "删除字段"（即添加字段的逆操作） 操作
+    
+    // STEP4 将操作栈item push进操作栈中
+    otherOptPushOptStack(optStackItem)
+    return true
+  }
+
+  /**
+   * 为update语句删除字段
+   * @param astId AST项ID
+   * @param index 要删除的字段索引位置
+   * @returns 是否删除成功
+   */
+  const updSqlDeleteField = (astId: string, index: number) => {
+    if (!editorAstList.value) {
+      return false
+    }
+    const { astItem, index: astIndex } = getAstItem(astId)
+    if (!astItem || !astItem.ast || !isUpdateAst(astItem.ast) || !astItem.ast.set || !Array.isArray(astItem.ast.set)) {
+      return false
+    }
+    
+    // 检查是否至少保留一个字段
+    if (astItem.ast.set.length <= 1) {
+      console.error('至少需要保留一个字段')
+      return false
+    }
+    
+    // 检查索引是否越界
+    if (index < 0 || index >= astItem.ast.set.length) {
+      console.error('字段索引越界:', index)
+      return false
+    }
+    
+    // STEP0 创建一个空的栈项，用于记录操作栈
+    const optStackItem: OptStackItem = {
+      thisOperate: { operArray: [] },
+      inverseOperate: { operArray: [] },
+    }
+
+    // STEP1 调用splice函数删除字段，并计算出逆操作的参数
+    const deleteFieldOp = {
+      rootObj: editorAstList.value,
+      editCoord: `[${astIndex}].ast.set`,
+      start: index,
+      deleteCount: 1,
+      items: [],
+    }
+    
+    const deleteFieldResult = coordSplice(deleteFieldOp)
+    if (!deleteFieldResult.reverseParams) {
+      return false
+    }
+    
+    // STEP2 向操作栈item中记录crud操作
+    optStackItem.thisOperate.operArray.push(deleteFieldOp) // 向 "正向操作列表" 中，添加 "删除字段" 操作
+    optStackItem.inverseOperate.operArray.unshift(deleteFieldResult.reverseParams) // 向 "逆操作列表" 中，添加 "添加字段"（即删除字段的逆操作） 操作
+    
+    // STEP3 将操作栈item push进操作栈中
+    otherOptPushOptStack(optStackItem)
+    return true
+  }
   return {
     editorAstList,
     optStack,
@@ -733,6 +844,8 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
     handleChangeType,
     updSqlSetAstColumn,
     updSqlModifyAstValue,
+    updSqlAddField,
+    updSqlDeleteField,
   }
 })
 
@@ -741,7 +854,7 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
 const isUpdateAst = (ast: any): ast is UpdateAst => {
   return ast && typeof ast === 'object' && ast.type === 'update'
 }
-
+// 类型守卫：检查是否是Insert_Replace类型
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const isInsertAst = (ast: any): ast is Insert_Replace => {
   return ast && typeof ast === 'object' && ast.type === 'insert'

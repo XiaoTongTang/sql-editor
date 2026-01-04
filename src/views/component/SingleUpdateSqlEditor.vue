@@ -19,11 +19,19 @@
           :width="120"
         >
           <template #header>
-            <el-input
-              :model-value="tableColumns[index]"
-              @input="handleHeaderInput(index, $event)"
-              placeholder="列名"
-            />
+            <div style="display: flex; flex-direction: column; gap: 2px; width: 100%">
+              <div style="display: flex; justify-content: space-between; width: 100%">
+                  <el-button type="success" size="small" @click="addColumn(index)"> 加列 </el-button>
+                  <el-button type="danger" size="small" @click="deleteColumn(index)">
+                    删列
+                  </el-button>
+                </div>
+              <el-input
+                :model-value="tableColumns[index]"
+                @input="handleHeaderInput(index, $event)"
+                placeholder="列名"
+              />
+            </div>
           </template>
           <template #default="{ row }">
             <el-input
@@ -165,6 +173,17 @@ const handleCellInput = (columnIndex: number, newValue: string | number) => {
   console.log('修改字段值:', columnIndex, newValue)
   editorTreeStore.updSqlModifyAstValue(props.astId, columnIndex, newValue)
 }
+
+// 添加列
+const addColumn = (index: number) => {
+  editorTreeStore.updSqlAddField(props.astId, index)
+}
+
+// 删除列
+const deleteColumn = (index: number) => {
+  editorTreeStore.updSqlDeleteField(props.astId, index)
+}
+
 
 // 滚动控制函数
 const scrollTable = (direction: 'left' | 'right' | 'up' | 'down') => {
