@@ -36,3 +36,7 @@ const sandboxAst: UpdateAST = {
   },
 }
 export const getSandboxAst = () => ({ ...sandboxAst })
+
+export const getSandboxSql = () => {
+  return 'UPDATE `sql_editor_sandbox` SET a=1 WHERE id=1'
+}

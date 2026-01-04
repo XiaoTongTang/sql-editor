@@ -62,6 +62,8 @@
           <label style="white-space: nowrap;">WHERE条件:</label>
           <el-input
             v-model="whereCondInputText"
+            @blur="handleWhereCondBlur"
+            @focus="handleWhereCondFocus"
             placeholder="请输入WHERE条件"
             style="width: 200px;"
           />
@@ -81,6 +83,7 @@ import {
   ElTableColumn,
   ElEmpty,
   ElInputNumber,
+  ElMessage,
 } from 'element-plus'
 import { useEditorTreeStore } from '@/stores/editorTree'
 import { getSandboxAst } from '@/utils/plainTextEditUtils'
@@ -117,6 +120,7 @@ Step2增加一个watch，监听editorTreeStore中AST的where子树，一旦where
 Step3为输入框增加onBlur事件，onBlur时写入AST中的where子树
 */
 const whereCondInputText = ref('')
+const whereCondInputTextOldValue = ref('') // 在聚焦输入框前，记录当前输入框的内容。如果where解析失败，就用这个值恢复输入框
 /*
 从AST中提取where条件字符串的工具函数
 背景：where条件语法非常复杂，不可能100%实现可视化编辑。所以需要直接编辑where条件的plain text
@@ -152,6 +156,29 @@ watch(
     getWhereCondInputTextFromAst()
   }
 )
+
+/**
+ * 处理WHERE条件文本框失去焦点事件
+ */
+const handleWhereCondBlur = () => {
+  // 调用更新WHERE条件的函数
+  try {
+    editorTreeStore.updSqlModifyWhereCond(props.astId, whereCondInputText.value)
+  } catch (error) {
+    // 如果更新WHERE条件失败，就用旧值恢复输入框
+    whereCondInputText.value = whereCondInputTextOldValue.value
+    ElMessage.error(String(error))
+  }
+}
+/**
+ * 处理WHERE条件文本框获得焦点事件
+ */
+const handleWhereCondFocus = () => {
+  // 记录当前输入框的内容
+  whereCondInputTextOldValue.value = whereCondInputText.value
+}
+
+
 
 onMounted(() => {
   // 组件挂载时，初始化whereCondInputText

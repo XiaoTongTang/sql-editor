@@ -7,6 +7,7 @@
     <div class="sql-input-section">
       <el-button type="primary" @click="editorTreeStore.undo">撤销</el-button>
       <el-button type="primary" @click="editorTreeStore.redo">重做</el-button>
+      备注:对于update语句的where条件输入框,是失去输入框焦点时才视为更新动作
     </div>
     <template v-for="(item, index) in editorTreeStore.editorAstList" :key="item.id">
       <InsUpdSqlEditTable v-if="item.type == 'insert'" :astIndex="index" :astId="item.id" v-model="item.ast as Insert_Replace" />

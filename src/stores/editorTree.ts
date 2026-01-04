@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
-import NodeSQLParser, { type Insert_Replace, type InsertReplaceValue, type Update as UpdateAst } from 'node-sql-parser'
+import NodeSQLParser, { type AST, type Insert_Replace, type InsertReplaceValue, type Update as UpdateAst } from 'node-sql-parser'
 import { generate as shortUuidGenerate } from 'short-uuid'
 import {
   coordSet,
@@ -10,6 +10,7 @@ import {
   type CoordSetParams,
   type CoordSpliceParams,
 } from '@/utils/coordCrudFunc'
+import { getSandboxSql } from '@/utils/plainTextEditUtils'
 
 export interface AstItem {
   id: string
@@ -824,6 +825,59 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
     otherOptPushOptStack(optStackItem)
     return true
   }
+  /**
+   * 更新update语句的WHERE条件
+   * Step1 将WHERE条件字符串拼接进“沙盒SQL”
+   * Step2 将“沙盒SQL”解析为临时AST
+   * Step3 从临时AST中截取where子树，拼接进AST中
+   * @param astId 
+   * @param whereCond 
+   * @returns 
+   */
+  const updSqlModifyWhereCond = (astId: string, whereCond: string) => {
+    if (!editorAstList.value) {
+      throw new Error('editorAstList 为空')
+    }
+    const { astItem, index: astIndex } = getAstItem(astId)
+    if (!astItem || !astItem.ast || !isUpdateAst(astItem.ast)) {
+      throw new Error('astItem 不是 update 类型')
+    }
+    const sandboxSql = getSandboxSql()
+    // Step1 将WHERE条件字符串拼接进“沙盒SQL”
+    const updateWhereSql = sandboxSql.replace(/WHERE .*/, `WHERE ${whereCond}`)
+    // Step2 将“沙盒SQL”解析为临时AST
+    const parser = new NodeSQLParser.Parser()
+    let sandboxAST: AST | undefined = undefined
+    try {
+      const sandboxASTList = parser.astify(updateWhereSql)
+      sandboxAST = Array.isArray(sandboxASTList) ? sandboxASTList[0] : sandboxASTList
+    } catch (error) {
+      console.error('WHERE条件语法解析失败:', error)
+      throw new Error('WHERE条件语法解析失败')
+    }
+    // Step3 从临时AST中截取where子树
+    if (!sandboxAST || !isUpdateAst(sandboxAST) || !sandboxAST.where ) {
+      throw new Error('WHERE条件字符串解析错误:' + whereCond)
+    }
+    const whereSubTree = {...sandboxAST.where}
+    // Step4 将新的where子树使用coordSet拼接进AST中
+    // 算出正向操作的参数
+    const posSetOper = {
+      rootObj: editorAstList.value,
+      editCoord: `[${astIndex}].ast.where`, // 编辑坐标：修改update语句的where中的值
+      newValue: whereSubTree
+    }
+    // 执行修改字段值的操作
+    const coordSetResult = coordSet(posSetOper)
+    if (!coordSetResult.reverseParams) {
+      throw new Error('coordSet执行失败' + JSON.stringify(coordSetResult))
+    }
+    // 记录操作栈
+    otherOptPushOptStack({
+      thisOperate: { operArray: [posSetOper] },
+      inverseOperate: { operArray: [coordSetResult.reverseParams] },
+    })
+  }
   return {
     editorAstList,
     optStack,
@@ -846,6 +900,7 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
     updSqlModifyAstValue,
     updSqlAddField,
     updSqlDeleteField,
+    updSqlModifyWhereCond
   }
 })
 
