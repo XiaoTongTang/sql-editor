@@ -16,6 +16,7 @@
 
     <div class="sql-output-section">
       <el-button type="success" @click="astToSql">输出修改后sql</el-button>
+      <el-button type="primary" @click="sendSqlToEditor">发送到编辑器</el-button>
       <el-input v-model="generatedSql" placeholder="生成的SQL语句" type="textarea" readonly :rows=10 />
     </div>
   </div>
@@ -80,6 +81,29 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener('message', messageListener);
 })
+
+/**
+ * 发送修改后的SQL语句到编辑器
+ */
+const sendSqlToEditor = () => {
+  if(generatedSql.value) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      const vscode = acquireVsCodeApi();
+      vscode.postMessage({
+        msgType: 'resultSqlText',
+        resultSqlText: generatedSql.value,
+      });
+    } catch (error) {
+      console.error('Error acquiring VS Code API:', error);
+    } finally {
+      
+    }
+  } else {
+    ElMessage.error('请先输出修改后SQL语句')
+  }
+}
 </script>
 
 <style scoped>

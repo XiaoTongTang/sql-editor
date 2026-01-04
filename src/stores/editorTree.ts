@@ -97,9 +97,16 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
       if (astList) {
         console.log(astList)
         const parser = new NodeSQLParser.Parser()
-        const sql = parser.sqlify(astList)
+        let sql = parser.sqlify(astList)
+        // 为最后一条sql后面补上分号
+        sql = sql.concat(';')
         // 遍历所有sql，给每个分号后面添加换行
-        return sql.replace(/;/g, ';\n')
+        sql = sql.replace(/;/g, ';\n')
+        // 删除sql内部每行的行首行尾空格
+        sql = sql.replace(/^\s+|\s+$/gm, '')
+        // 给最后一条sql后方拼上换行
+        sql = sql.concat('\n')
+        return sql
       }
     } catch (error) {
       console.error('生成SQL错误:', error)
