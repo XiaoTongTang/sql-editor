@@ -878,6 +878,62 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
       inverseOperate: { operArray: [coordSetResult.reverseParams] },
     })
   }
+  /**
+   * 更新update语句指定列的数据类型(直接修改AST)
+   * @param colIndex 列索引
+   * @param type 新的数据类型
+   */
+  const updSqlDataChangeType = (astId: string, colIndex: number, type: 'number' | 'single_quote_string' | 'null') => {
+    const { astItem, index: astIndex } = getAstItem(astId)
+    // STEP0 创建一个空的栈项，用于记录操作栈
+    const optStackItem: OptStackItem = {
+      thisOperate: { operArray: [] },
+      inverseOperate: { operArray: [] },
+    }
+    if (!astItem || !astItem.ast || !isUpdateAst(astItem.ast)) {
+      throw new Error('AST树不存在')
+    }
+    if (!astItem.ast.set[colIndex] || !astItem.ast.set[colIndex].value) {
+      throw new Error('此列数据不存在')
+    }
+    // STEP1 如果此列已经是指定类型,则无需处理
+    if (astItem.ast.set[colIndex].value.type === type) {
+      throw new Error('此列数据已为指定类型:' + type)
+    }
+    // STEP2 否则，将这一列的值设置为指定类型
+    // STEP2.1 构造新值
+    let newValue = null;
+    switch (type) {
+      case 'number':
+        newValue = 0;
+        break;
+      case 'single_quote_string':
+        newValue = '';
+        break;
+      case 'null':
+        newValue = null;
+        break;
+    }
+    // STEP2.1 构建 ”坐标“ + 新值 操作项
+    const modifyDataTypeOp = {
+      rootObj: editorAstList.value,
+      editCoord: `[${astIndex}].ast.set[${colIndex}].value`,
+      newValue: {
+        type: type,
+        value: newValue,
+      }
+    }
+    // STEP2.2 将这一列的值设置为新类型
+    const modifyResult = coordSet(modifyDataTypeOp)
+    if (!modifyResult.reverseParams) {
+      throw new Error('coordSet执行失败' + JSON.stringify(modifyResult))
+    }
+    // STEP2.3 向操作栈item中记录修改数据类型的crud操作
+    optStackItem.thisOperate.operArray.push(modifyDataTypeOp) // 向 ”正向操作列表“ 中，添加 ”修改数据类型“ 操作
+    optStackItem.inverseOperate.operArray.unshift(modifyResult.reverseParams) // 向 ”逆操作列表“ 中，添加 ”修改数据类型“（即修改数据类型的逆操作） 操作
+    // STEP2.4 将操作栈item push进操作栈中
+    otherOptPushOptStack(optStackItem)
+  }
   return {
     editorAstList,
     optStack,
@@ -900,7 +956,8 @@ export const useEditorTreeStore = defineStore('editorTree', () => {
     updSqlModifyAstValue,
     updSqlAddField,
     updSqlDeleteField,
-    updSqlModifyWhereCond
+    updSqlModifyWhereCond,
+    updSqlDataChangeType
   }
 })
 

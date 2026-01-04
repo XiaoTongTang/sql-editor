@@ -31,6 +31,10 @@
       <div style="display: flex; gap: 10px; margin-bottom: 10px;">
         <el-button size="small" @click="scrollTable('left')">← 向左滚动</el-button>
         <el-button size="small" @click="scrollTable('right')">向右滚动 →</el-button>
+        <div>
+          <label style="white-space: nowrap;">展开类型修改按钮:</label>
+          <el-switch v-model="fullDataEditButton" />
+        </div>
       </div>
       <el-table class="custom-padding" v-if="tableData.length > 0" :data="tableData" style="width: 100%" border ref="tableRef">
         <el-table-column v-for="(column, index) in tableColumns" :key="index" :width="120">
@@ -85,9 +89,7 @@
         <el-table-column fixed="right" width="140">
           <template #header>
             <div style="display: flex; flex-direction: column; gap: 5px; text-align: center">
-              <div style="font-weight: bold">操作
-                <el-switch v-model="fullDataEditButton" />
-              </div>
+              <div style="font-weight: bold">操作</div>
               <div style="display: flex; gap: 5px">
                 <el-button type="success" size="small" @click="addColumn(tableColumns.length - 1)">
                   加列

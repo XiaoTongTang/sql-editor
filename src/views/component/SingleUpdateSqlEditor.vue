@@ -30,6 +30,10 @@
       <div style="display: flex; gap: 10px; margin-bottom: 10px">
         <el-button size="small" @click="scrollTable('left')">← 向左滚动</el-button>
         <el-button size="small" @click="scrollTable('right')">向右滚动 →</el-button>
+        <div>
+          <label style="white-space: nowrap;">展开类型修改按钮:</label>
+          <el-switch v-model="fullDataEditButton" />
+        </div>
       </div>
       <el-table
         class="custom-padding"
@@ -79,6 +83,16 @@
               :model-value="'NULL'"
               disabled 
             />
+            <select
+              v-if="fullDataEditButton"
+              :name="'changeTypeSelector' + index"
+              :value="row[tableColumns[index] as string]?.type"
+              @change="handleChangeType(index, ($event.target as HTMLSelectElement).value as ('null' | 'single_quote_string' | 'number'))"
+            >
+              <option value="null">NULL</option>
+              <option value="single_quote_string">STR</option> <!-- 无需手动写 selected，v-model 自动控制 -->
+              <option value="number">NUM</option>
+            </select>
           </template>
         </el-table-column>
       </el-table>
@@ -130,6 +144,9 @@ const props = defineProps({
 })
 // v-model值，这个值就是一条update语句的AST
 const parsedAst = defineModel<UpdateAst | null>({ required: true })
+
+// 是否展开完整编辑按钮
+const fullDataEditButton = ref(false)
 
 interface BlockData {
   type: 'single_quote_string' | 'number' | 'null'
@@ -228,7 +245,7 @@ const parseValue = (valueAST: any): BlockData => {
 
   if (!(valueAST.type === 'single_quote_string' || valueAST.type === 'number' || valueAST.type === 'null')) {
     return {
-      type: valueAST.type,
+      type: 'single_quote_string',
       value: '无法解析',
     }
   }
@@ -331,6 +348,19 @@ const tableAndDb = computed(() => {
     dbName: (parsedAst.value.table[0] as BaseFrom).db || '',
   }
 })
+
+/**
+ * 处理类型选择器改变事件，修改AST中的字段类型
+ * @param index 列索引
+ * @param type 新的字段类型
+ */
+const handleChangeType = (index: number, type: 'null' | 'single_quote_string' | 'number') => {
+  try {
+    editorTreeStore.updSqlDataChangeType(props.astId, index, type)
+  } catch (error) {
+    ElMessage.error(String(error))
+  }
+}
 
 // 滚动控制函数
 const scrollTable = (direction: 'left' | 'right' | 'up' | 'down') => {
