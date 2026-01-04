@@ -1,6 +1,32 @@
 <template>
   <div class="about-view">
     <div class="sql-visualization-section">
+            <div style="display: flex; gap: 10px; margin-bottom: 8px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <label style="white-space: nowrap;">SQL类型:</label>
+          {{ sqlType }}
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <label style="white-space: nowrap;">表名:</label>
+          <el-input
+            :model-value="tableAndDb.tableName"
+            @input="editorTreeStore.setAstTableName(props.astId, $event)"
+            placeholder="请输入表名"
+            size="small"
+            style="width: 140px;"
+          />
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <label style="white-space: nowrap;">数据库名:</label>
+          <el-input
+            :model-value="tableAndDb.dbName"
+            @input="editorTreeStore.setAstDbName(props.astId, $event)"
+            placeholder="请输入数据库名"
+            size="small"
+            style="width: 140px;"
+          />
+        </div>
+      </div>
       <div style="display: flex; gap: 10px; margin-bottom: 10px">
         <el-button size="small" @click="scrollTable('left')">← 向左滚动</el-button>
         <el-button size="small" @click="scrollTable('right')">向右滚动 →</el-button>
@@ -75,7 +101,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import NodeSQLParser, { type Update as UpdateAst } from 'node-sql-parser'
+import NodeSQLParser, { type BaseFrom, type Update as UpdateAst } from 'node-sql-parser'
 import {
   ElInput,
   ElButton,
@@ -274,6 +300,37 @@ const deleteColumn = (index: number) => {
   editorTreeStore.updSqlDeleteField(props.astId, index)
 }
 
+/**
+ * 从AST中提取数据库名
+ */
+const sqlType = computed(() => {
+  if (!parsedAst.value || !parsedAst.value.type) {
+    return ''
+  }
+  // 转换为大写
+  return parsedAst.value.type.toUpperCase() || ''
+})
+/**
+ * 从AST中提取表名
+ */
+const tableAndDb = computed(() => {
+  if (!parsedAst.value || !parsedAst.value.table || !parsedAst.value.table[0]) {
+    return {
+      tableName: '无法解析',
+      dbName: '无法解析',
+    }
+  }
+  if (parsedAst.value.table.length > 1) {
+    return {
+      tableName: '无法解析多表',
+      dbName: '无法解析多表',
+    }
+  }
+  return {
+    tableName: (parsedAst.value.table[0] as BaseFrom).table || '',
+    dbName: (parsedAst.value.table[0] as BaseFrom).db || '',
+  }
+})
 
 // 滚动控制函数
 const scrollTable = (direction: 'left' | 'right' | 'up' | 'down') => {
